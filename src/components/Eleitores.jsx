@@ -120,6 +120,8 @@ export default function Eleitores() {
   const [filtroCargo,   setFiltroCargo]   = useState('')
   const [filtroAno,     setFiltroAno]     = useState('')
   const [modalBuscaCand,setModalBuscaCand]= useState(false)
+  const [tseLoading,    setTseLoading]    = useState(false)
+  const [tseErro,       setTseErro]       = useState('')
   useEffect(() => {
     fetch('/locais_sc.json').then(r => r.json()).then(setScData).catch(() => {})
     fetch('/candidatos_sc.json').then(r => r.json()).then(setCandDb).catch(() => {})
@@ -296,26 +298,58 @@ export default function Eleitores() {
     }).slice(0, 50)
   }, [candDb, buscaCand, filtroCargo, filtroAno])
 
-  function aplicarCandidato(cand) {
-    setDados(prev => {
-      const novo = {
-        ...(prev || { zonas: [], eleitoresAptos: 0, votosTotal: 0, municipios: [] }),
-        candidato:      cand.nm,
-        numero:         cand.n,
-        partido:        cand.p,
-        partidoCompleto: cand.mp,
-        cargo:          cand.c,
-        municipio:      cand.m,
-        urna:           cand.u,
-        situacao:       cand.s,
-        ano:            cand.a,
-        foto:           cand.foto || null,
-      }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(novo))
-      return novo
-    })
+  async function aplicarCandidato(cand) {
+    const base = {
+      candidato:      cand.nm,
+      numero:         cand.n,
+      partido:        cand.p,
+      partidoCompleto: cand.mp,
+      cargo:          cand.c,
+      municipio:      cand.m,
+      urna:           cand.u,
+      situacao:       cand.s,
+      ano:            cand.a,
+      foto:           cand.foto || null,
+      zonas:          [],
+      eleitoresAptos: 0,
+      votosTotal:     0,
+      municipios:     [],
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(base))
+    setDados(base)
     setModalBuscaCand(false)
     setBuscaCand('')
+    setTseErro('')
+    // Só busca TSE para cargos suportados
+    const cargosSuportados = ['DEPUTADO FEDERAL','DEPUTADO ESTADUAL','SENADOR','GOVERNADOR','VEREADOR','PREFEITO']
+    if (!cargosSuportados.includes((cand.c||'').toUpperCase())) return
+    setTseLoading(true)
+    try {
+      const params = new URLSearchParams({ numero: cand.n, cargo: cand.c, ano: cand.a })
+      const res = await fetch(`/api/tse-proxy?${params}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const tseData = await res.json()
+      if (tseData.error) throw new Error(tseData.error)
+      const completo = {
+        ...base,
+        candidato:      tseData.candidato || base.candidato,
+        urna:           tseData.urna      || base.urna,
+        partido:        tseData.partido   || base.partido,
+        situacao:       tseData.situacao  || base.situacao,
+        municipio:      tseData.municipio || base.municipio,
+        municipios:     tseData.municipios || [],
+        zonas:          tseData.zonas      || [],
+        eleitoresAptos: tseData.eleitoresAptos || 0,
+        votosTotal:     tseData.votosTotal || 0,
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(completo))
+      setDados(completo)
+    } catch (err) {
+      console.error('Erro ao buscar TSE:', err)
+      setTseErro(`Não foi possível buscar dados do TSE: ${err.message}`)
+    } finally {
+      setTseLoading(false)
+    }
   }
 
   /* derivados */
@@ -512,6 +546,22 @@ export default function Eleitores() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Banner: carregando TSE ─────────────────────────── */}
+      {tseLoading && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl"
+          style={{ background: '#1e40af', border: '1px solid rgba(99,102,241,0.5)', minWidth: 260 }}>
+          <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin flex-shrink-0" />
+          <span className="text-white font-semibold" style={{ fontSize: 13 }}>Buscando dados do TSE...</span>
+        </div>
+      )}
+      {tseErro && !tseLoading && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl"
+          style={{ background: '#7f1d1d', border: '1px solid rgba(239,68,68,0.5)', minWidth: 260, maxWidth: 400 }}>
+          <span className="text-white" style={{ fontSize: 12 }}>{tseErro}</span>
+          <button onClick={() => setTseErro('')} className="ml-auto flex-shrink-0"><X size={13} className="text-white" /></button>
         </div>
       )}
 
