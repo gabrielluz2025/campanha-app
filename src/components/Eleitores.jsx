@@ -320,6 +320,8 @@ export default function Eleitores() {
     setModalBuscaCand(false)
     setBuscaCand('')
     setTseErro('')
+    setFiltroCidade(null)
+    setFiltroZona(null)
     // Só busca TSE para cargos suportados
     const cargosSuportados = ['DEPUTADO FEDERAL','DEPUTADO ESTADUAL','SENADOR','GOVERNADOR','VEREADOR','PREFEITO']
     if (!cargosSuportados.includes((cand.c||'').toUpperCase())) return

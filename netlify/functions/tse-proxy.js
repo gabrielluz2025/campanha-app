@@ -46,15 +46,24 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Consulta no Supabase: todos os registros do candidato
-    const rows = await sbFetch('tse_votos_sc', {
-      select: 'municipio,zona,secao,votos',
-      ano:    `eq.${parseInt(ano)}`,
-      numero: `eq.${parseInt(numero)}`,
-      cargo:  `ilike.%${cargo.toUpperCase().trim()}%`,
-      order:  'municipio,zona,secao',
-      limit:  50000,
-    })
+    // Busca paginada para não perder dados com o limite do Supabase
+    const PAGE = 10000
+    let rows = [], offset = 0, done = false
+    while (!done) {
+      const chunk = await sbFetch('tse_votos_sc', {
+        select: 'municipio,zona,secao,votos',
+        ano:    `eq.${parseInt(ano)}`,
+        numero: `eq.${parseInt(numero)}`,
+        cargo:  `ilike.%${cargo.toUpperCase().trim()}%`,
+        order:  'municipio,zona,secao',
+        limit:  PAGE,
+        offset,
+      })
+      if (!chunk || chunk.length === 0) break
+      rows = rows.concat(chunk)
+      if (chunk.length < PAGE) done = true
+      else offset += PAGE
+    }
 
     if (!rows || rows.length === 0) {
       return {
