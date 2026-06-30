@@ -1,0 +1,16 @@
+Options -MultiViews
+RewriteEngine On
+
+# Nunca redireciona arquivos PHP
+RewriteRule \.php$ - [L]
+
+# Permite acesso direto a arquivos reais (json, jpg, css, js, etc.)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Permite acesso direto a diretórios reais
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Todo o resto vai para o index.html (SPA React)
+RewriteRule ^ index.html [L]

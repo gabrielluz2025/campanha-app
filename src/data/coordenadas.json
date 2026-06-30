@@ -1,0 +1,104 @@
+{
+  "1": {
+    "id": 1,
+    "nome": "Sede",
+    "lat": null,
+    "lng": null
+  },
+  "2": {
+    "id": 2,
+    "nome": "Garcia",
+    "lat": null,
+    "lng": null
+  },
+  "3": {
+    "id": 3,
+    "nome": "Zendron",
+    "lat": null,
+    "lng": null
+  },
+  "4": {
+    "id": 4,
+    "nome": "Glória",
+    "lat": null,
+    "lng": null
+  },
+  "5": {
+    "id": 5,
+    "nome": "Itapuí",
+    "lat": null,
+    "lng": null
+  },
+  "6": {
+    "id": 6,
+    "nome": "Eng. Odebrecht",
+    "lat": null,
+    "lng": null
+  },
+  "7": {
+    "id": 7,
+    "nome": "Emaús",
+    "lat": null,
+    "lng": null
+  },
+  "8": {
+    "id": 8,
+    "nome": "Badenfurt",
+    "lat": null,
+    "lng": null
+  },
+  "9": {
+    "id": 9,
+    "nome": "Heinrich Hemmer",
+    "lat": null,
+    "lng": null
+  },
+  "10": {
+    "id": 10,
+    "nome": "Balsa",
+    "lat": null,
+    "lng": null
+  },
+  "11": {
+    "id": 11,
+    "nome": "Ilha do Salto",
+    "lat": null,
+    "lng": null
+  },
+  "12": {
+    "id": 12,
+    "nome": "Testo Salto",
+    "lat": null,
+    "lng": null
+  },
+  "13": {
+    "id": 13,
+    "nome": "Fortaleza",
+    "lat": null,
+    "lng": null
+  },
+  "14": {
+    "id": 14,
+    "nome": "Sete de Maio",
+    "lat": null,
+    "lng": null
+  },
+  "15": {
+    "id": 15,
+    "nome": "Shalon",
+    "lat": null,
+    "lng": null
+  },
+  "16": {
+    "id": 16,
+    "nome": "Escola Agrícola",
+    "lat": null,
+    "lng": null
+  },
+  "17": {
+    "id": 17,
+    "nome": "Salto Weissbach",
+    "lat": null,
+    "lng": null
+  }
+}
