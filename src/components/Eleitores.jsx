@@ -326,7 +326,7 @@ export default function Eleitores() {
     setTseLoading(true)
     try {
       const params = new URLSearchParams({ numero: cand.n, cargo: cand.c, ano: cand.a })
-      const res = await fetch(`/api/tse-proxy?${params}`)
+      const res = await fetch(`/.netlify/functions/tse-proxy?${params}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const tseData = await res.json()
       if (tseData.error) throw new Error(tseData.error)
