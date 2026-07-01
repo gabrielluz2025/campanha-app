@@ -9,7 +9,7 @@ const CORS = {
 }
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://sdawefxseuuzzqbrjkej.supabase.co'
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || ''
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE || process.env.VITE_SUPABASE_ANON_KEY || ''
 
 async function sbFetch(path, params = {}) {
   const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&')
@@ -36,6 +36,22 @@ exports.handler = async (event) => {
 
   const q = event.queryStringParameters || {}
   const { numero, cargo, ano } = q
+
+  // Validar combinação ano/cargo (evita retornar dados fantasmas de 2024)
+  const anoNum = parseInt(ano)
+  const cargoLimpo = (cargo || '').toUpperCase().trim()
+  const cargosPorAno = {
+    2022: ['DEPUTADO FEDERAL', 'DEPUTADO ESTADUAL', 'SENADOR', 'GOVERNADOR'],
+    2024: ['PREFEITO', 'VEREADOR'],
+  }
+  const validos = cargosPorAno[anoNum]
+  if (!validos || !validos.some(c => cargoLimpo.includes(c))) {
+    return {
+      statusCode: 400,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: `Cargo não disponível para o ano ${anoNum}. Cargos válidos: ${validos?.join(', ') || 'nenhum'}` }),
+    }
+  }
 
   if (!numero || !cargo || !ano) {
     return {

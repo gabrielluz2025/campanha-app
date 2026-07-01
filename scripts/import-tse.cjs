@@ -13,8 +13,8 @@ const readline     = require('readline')
 const { execSync } = require('child_process')
 const { createClient } = require('@supabase/supabase-js')
 
-const SUPABASE_URL  = 'https://sdawefxseuuzzqbrjkej.supabase.co'
-const SUPABASE_KEY  = 'sb_publishable_fLJ6oIOMX0aYiwv0f1DVDw_KOr6Wi6g'
+const SUPABASE_URL  = process.env.VITE_SUPABASE_URL || 'https://sdawefxseuuzzqbrjkej.supabase.co'
+const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_ROLE || process.env.VITE_SUPABASE_ANON_KEY || ''
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const TMP = path.join(__dirname, '../tmp-tse')
@@ -35,17 +35,24 @@ const FONTES = [
   },
 ]
 
-// Download com progresso
-function download(url, destFile) {
+// Download com progresso e retry
+function download(url, destFile, tentativa = 1) {
   return new Promise((resolve, reject) => {
     if (fs.existsSync(destFile)) {
-      console.log(`  [cache] ${path.basename(destFile)} já existe, pulando download`)
-      return resolve(destFile)
+      if (fs.statSync(destFile).size > 0) {
+        console.log(`  [cache] ${path.basename(destFile)} já existe, pulando download`)
+        return resolve(destFile)
+      }
+      fs.unlinkSync(destFile)
     }
     console.log(`  Baixando ${path.basename(destFile)}...`)
     const file = fs.createWriteStream(destFile)
     let downloaded = 0
-    https.get(url, (res) => {
+    const req = https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        file.destroy()
+        return reject(new Error(`HTTP ${res.statusCode}`))
+      }
       const total = parseInt(res.headers['content-length'] || '0')
       res.on('data', chunk => {
         downloaded += chunk.length
@@ -53,7 +60,16 @@ function download(url, destFile) {
       })
       res.pipe(file)
       file.on('finish', () => { file.close(); console.log(''); resolve(destFile) })
-    }).on('error', reject)
+    })
+    req.on('error', (err) => {
+      file.destroy()
+      if (fs.existsSync(destFile)) fs.unlinkSync(destFile)
+      if (tentativa < 3) {
+        console.log(`\n  Erro de rede, tentando novamente (${tentativa}/3)...`)
+        return setTimeout(() => resolve(download(url, destFile, tentativa + 1)), 3000)
+      }
+      reject(err)
+    })
   })
 }
 
@@ -78,10 +94,11 @@ async function processarCSVStreaming(csvFile, ano) {
     if (lote.length === 0) return
     const { error } = await supabase
       .from('tse_votos_sc')
-      .insert(lote, { ignoreDuplicates: true })
+      .upsert(lote, { onConflict: 'ano,cargo,numero,municipio,zona,secao', ignoreDuplicates: true })
     if (error) {
       totalErro += lote.length
       lastErrMsg = error.message
+      console.log(`\n  [ERRO] ${error.code}: ${error.message.substring(0,120)}`)
     } else {
       totalOk += lote.length
     }
@@ -129,6 +146,10 @@ async function processarCSVStreaming(csvFile, ano) {
 async function main() {
   console.log('=== Importador de dados TSE → Supabase (streaming) ===\n')
 
+  // Não limpa a tabela inteira (muitos registros → timeout).
+  // O upsert com ignoreDuplicates mantém dados existentes e insere apenas os novos.
+  console.log('Iniciando importação incremental...')
+
   for (const fonte of FONTES) {
     console.log(`\n--- ${fonte.label} ---`)
     const zipFile = path.join(TMP, path.basename(fonte.url))
@@ -138,19 +159,20 @@ async function main() {
       // 1. Download do ZIP
       await download(fonte.url, zipFile)
 
-      // 2. Extrai CSV para disco usando PowerShell (evita limite de memória do Node)
+      // 2. Extrai CSV para subpasta própria (evita colisão entre anos)
+      const extraiDir = path.join(TMP, `extrai-${fonte.ano}`)
+      if (!fs.existsSync(extraiDir)) fs.mkdirSync(extraiDir, { recursive: true })
       if (!fs.existsSync(csvFile)) {
         console.log('  Extraindo ZIP com PowerShell...')
         const zipEsc = zipFile.replace(/'/g, "''")
-        const tmpEsc = TMP.replace(/'/g, "''")
+        const dirEsc = extraiDir.replace(/'/g, "''")
         execSync(
-          `powershell -Command "Expand-Archive -Path '${zipEsc}' -DestinationPath '${tmpEsc}' -Force"`,
+          `powershell -Command "Expand-Archive -Path '${zipEsc}' -DestinationPath '${dirEsc}' -Force"`,
           { stdio: 'inherit' }
         )
-        // Procura o CSV extraído e renomeia se necessário
-        const arquivos = fs.readdirSync(TMP).filter(f => f.toLowerCase().endsWith('.csv'))
+        const arquivos = fs.readdirSync(extraiDir).filter(f => f.toLowerCase().endsWith('.csv'))
         if (arquivos.length === 0) { console.error('  CSV não encontrado após extração'); continue }
-        const extraido = path.join(TMP, arquivos[0])
+        const extraido = path.join(extraiDir, arquivos[0])
         if (extraido !== csvFile) fs.renameSync(extraido, csvFile)
         console.log('  CSV extraído com sucesso.')
       } else {
