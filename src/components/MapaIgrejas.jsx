@@ -342,6 +342,97 @@ export const IGREJAS_EXTERNAS = [
   { id:1166, lat:-26.8614, lng:-49.0473, nome:'Igreja Universal', setor:'Itoupava Norte', denominacao:'Outra', endereco:'Rua dois de Setembro 4011, Itoupava Norte - Blumenau - SC', culto:'', pastor1:'', esposa1:'', pastor2:'', esposa2:'', telefone:'48 3216-6162', foto:'/fotos/sem-foto.jpg' },
 ]
 
+function temFotoValida(foto) {
+  return foto && foto !== '/fotos/sem-foto.jpg'
+}
+
+function urlStreetView(lat, lng) {
+  return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`
+}
+
+function abrirStreetView(ig, e) {
+  e?.stopPropagation?.()
+  e?.preventDefault?.()
+  if (ig.lat && ig.lng) {
+    window.open(urlStreetView(ig.lat, ig.lng), '_blank', 'noopener,noreferrer')
+    return
+  }
+  if (ig.endereco) {
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ig.endereco)}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
+  }
+}
+
+function MidiaIgreja({ ig, height = 120 }) {
+  const [fotoOk, setFotoOk] = useState(() => temFotoValida(ig.foto))
+
+  useEffect(() => {
+    setFotoOk(temFotoValida(ig.foto))
+  }, [ig.id, ig.foto])
+
+  const wrapStyle = {
+    width: 'calc(100% + 18px)',
+    marginLeft: -9,
+    marginTop: -9,
+    marginBottom: 8,
+    borderRadius: '4px 4px 0 0',
+    overflow: 'hidden',
+    height,
+    background: '#0a0f1e',
+    position: 'relative',
+  }
+
+  return (
+    <div style={wrapStyle}>
+      {fotoOk ? (
+        <img
+          src={ig.foto}
+          alt={ig.nome}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onError={() => setFotoOk(false)}
+        />
+      ) : (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            color: 'rgba(203,213,235,0.55)',
+            padding: 12,
+            textAlign: 'center',
+          }}
+        >
+          <MapPin size={22} style={{ opacity: 0.45 }} />
+          <span style={{ fontSize: 11, fontWeight: 600 }}>Sem foto da igreja</span>
+        </div>
+      )}
+      {(ig.lat && ig.lng) && (
+        <button
+          type="button"
+          onClick={e => abrirStreetView(ig, e)}
+          className="absolute bottom-2 right-2 flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold"
+          style={{
+            fontSize: 10,
+            background: 'linear-gradient(135deg,#facc15,#eab308)',
+            color: '#1a1408',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+          }}
+        >
+          <Navigation2 size={11} />
+          Ver rua
+        </button>
+      )}
+    </div>
+  )
+}
+
 function markerIcon(label, color, selecionado = false, visitado = false, denominacao = DENOMINACAO_PADRAO, prioridade = 'media') {
   const isOutra = denominacao !== DENOMINACAO_PADRAO
   const isAlta  = prioridade === 'alta'
@@ -1369,28 +1460,7 @@ export default function MapaIgrejas() {
                 icon={markerIcon(label, markerCor, naRota, ig.visitado, ig.denominacao, ig.prioridade)}>
                 <Popup minWidth={220}>
                   <div className="w-[220px]">
-                    <div style={{ width: 'calc(100% + 18px)', marginLeft: -9, marginTop: -9, marginBottom: 8, borderRadius: '4px 4px 0 0', overflow: 'hidden', height: 120, background: '#0a0f1e', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                      {ig.foto && ig.foto !== '/fotos/sem-foto.jpg' ? (
-                        <img src={ig.foto} alt={ig.nome}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                          onError={e => {
-                            e.target.style.display = 'none'
-                            const sv = document.createElement('iframe')
-                            sv.src = `https://www.google.com/maps?q=${ig.lat},${ig.lng}&layer=c&cbll=${ig.lat},${ig.lng}&output=svembed`
-                            sv.style.cssText = 'width:100%;height:120px;border:0;display:block'
-                            sv.setAttribute('allowfullscreen', '')
-                            e.target.parentNode.appendChild(sv)
-                          }} />
-                      ) : (
-                        <iframe
-                          title={`streetview-${ig.id}`}
-                          src={`https://www.google.com/maps?q=${ig.lat},${ig.lng}&layer=c&cbll=${ig.lat},${ig.lng}&output=svembed`}
-                          style={{ width: '100%', height: '120px', border: 0, display: 'block' }}
-                          allowFullScreen
-                          loading="lazy"
-                        />
-                      )}
-                    </div>
+                    <MidiaIgreja ig={ig} />
                     <div style={{ borderLeft: `3px solid ${isOutra ? corDen : cor}`, paddingLeft: 6 }}>
                       <p className="font-bold txt-1 text-sm leading-tight">{ig.nome}</p>
                       <p className="text-xs font-medium mt-0.5" style={{ color: isOutra ? corDen : cor }}>{ig.setor}</p>
