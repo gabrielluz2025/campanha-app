@@ -1,0 +1,19 @@
+---
+description: Toda melhoria feita neste chat deve ir para o GitHub
+alwaysApply: true
+---
+
+# Sincronizar melhorias com o GitHub
+
+Este projeto vive em https://github.com/gabrielluz2025/campanha-app.
+
+Quando o usuário pedir uma melhoria, correção ou alteração:
+
+1. Implemente no código local (`C:\Users\lucas\campanha-app`).
+2. Faça commit das mudanças relevantes (mensagem curta em português ou inglês, focada no porquê).
+3. Dê push para `origin` na branch atual (em geral `main`).
+4. Confirme no chat que o GitHub foi atualizado e informe o commit.
+
+Não espere o usuário pedir commit/push de novo: isso já está combinado para este repositório.
+
+Não commitar `.env`, credenciais ou arquivos gerados (`node_modules`, `dist`, `tmp-tse`).
