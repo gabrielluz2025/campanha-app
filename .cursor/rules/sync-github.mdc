@@ -16,4 +16,6 @@ Quando o usuário pedir uma melhoria, correção ou alteração:
 
 Não espere o usuário pedir commit/push de novo: isso já está combinado para este repositório.
 
-Não commitar `.env`, credenciais ou arquivos gerados (`node_modules`, `dist`, `tmp-tse`).
+Após correções que devem ir ao ar em campanha.space, rode `deploy-live.ps1` (publica via SSH no caminho real `domains/campanha.space/public_html/`).
+
+Não commitar `.env`, credenciais ou arquivos gerados (`node_modules`, `dist`, `tmp-tse`, `tmp-live.js`, `deploy-hostinger/assets/`).
