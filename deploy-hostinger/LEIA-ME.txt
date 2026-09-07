@@ -1,0 +1,14 @@
+Correcao do botao "Ver rua" (campanha.space)
+============================================
+
+O arquivo corrigido esta em:
+  assets\index-DhnYuIz6.js
+
+Como publicar (unico jeito que funciona hoje):
+1. Hostinger > campanha.space > Gerenciador de Arquivos
+2. public_html > assets
+3. Upload de index-DhnYuIz6.js (substituir)
+
+Atalho: de dois cliques em PUBLICAR-CORRECAO-VER-RUA.bat na pasta do projeto.
+
+O deploy por FTP NAO altera o site no ar (servidor diferente).
