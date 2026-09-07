@@ -40,6 +40,8 @@ powershell -NoProfile -Command ^
   "4) Confirme SUBSTITUIR o arquivo antigo.`n`n" ^
   "Depois teste em campanha.space: Mapa ^> Ver rua.`n" ^
   "Deve abrir o Google Maps em nova aba.`n`n" ^
+  "5) Abra LIMPAR-CACHE-DO-SITE.bat (ou reset-app.html)`n" ^
+  "   para o navegador pegar o arquivo novo.`n`n" ^
   "IMPORTANTE: o FTP normal NAO atualiza este site.`n" ^
   "So funciona pelo Gerenciador de Arquivos.'," ^
   "'Publicar correcao - Ver rua'," ^

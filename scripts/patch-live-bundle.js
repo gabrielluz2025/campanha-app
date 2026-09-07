@@ -24,6 +24,10 @@ const reps = [
     'onClick:()=>{j?j(t):window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${t.lat},${t.lng}`,"_blank")}',
     `onClick:()=>${openUrl('t')}`,
   ],
+  [
+    'onClick:()=>l==null?void 0:l(t),children:"Ver rua"',
+    `onClick:()=>${openUrl('t')},children:"Ver rua"`,
+  ],
 ]
 
 let count = 0
