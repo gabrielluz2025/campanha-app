@@ -53,6 +53,30 @@ const kpePatch =
   'false&&r.jsx(kpe,{options:{position:{lat:0,lng:0},visible:!1'
 if (replaceAll(kpeNeedle, kpePatch, 'disable embedded StreetView panorama')) count++
 
+// Desliga controle nativo de Street View no mapa (causa o balao/quadrado preto)
+if (replaceAll('streetViewControl:!0', 'streetViewControl:!1', 'disable streetViewControl on map')) count++
+
+// Impede o panorama nativo do Google Maps de abrir dentro do mapa
+if (
+  replaceAll(
+    'const V=$.getVisible();j(V),V||u==null||u()',
+    'const V=$.getVisible();V&&$.setVisible(!1);j(!1)',
+    'block native street view visible_changed'
+  )
+)
+  count++
+
+if (replaceAll('const R=!!d||N', 'const R=!1', 'disable street view host overlay')) count++
+
+if (
+  replaceAll(
+    'const $=D.getStreetView();$&&$.addListener',
+    'const $=D.getStreetView();$&&($.setVisible(!1),$.addListener',
+    'hide street view on map load'
+  )
+)
+  count++
+
 // Remove overlay "Voltar ao mapa" / caixa preta residual
 if (replaceAll('R&&r.jsxs("button",{type:"button",onClick:k,className:"streetview-exit"', 'false&&r.jsxs("button",{type:"button",onClick:k,className:"streetview-exit"', 'hide streetview-exit overlay')) count++
 
