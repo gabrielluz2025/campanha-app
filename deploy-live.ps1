@@ -62,7 +62,8 @@ if (-not $SkipPatch) {
 }
 
 $indexFile = Join-Path $DeployDir 'index.html'
-$jsFile    = Join-Path $AssetsDir 'index-DhnYuIz6.js'
+$jsFile    = Join-Path $AssetsDir 'index-verrua.js'
+$jsLegacy  = Join-Path $AssetsDir 'index-DhnYuIz6.js'
 
 foreach ($f in @($indexFile, $jsFile)) {
     if (-not (Test-Path $f)) {
@@ -83,7 +84,10 @@ Write-Host 'SSH OK' -ForegroundColor Green
 
 Write-Host "`n[3/3] Enviando para $REMOTE_BASE ..." -ForegroundColor Cyan
 Invoke-ScpUpload -LocalPath $indexFile -RemotePath "$REMOTE_BASE/index.html"
-Invoke-ScpUpload -LocalPath $jsFile -RemotePath "$REMOTE_BASE/assets/index-DhnYuIz6.js"
+Invoke-ScpUpload -LocalPath $jsFile -RemotePath "$REMOTE_BASE/assets/index-verrua.js"
+if (Test-Path $jsLegacy) {
+    Invoke-ScpUpload -LocalPath $jsLegacy -RemotePath "$REMOTE_BASE/assets/index-DhnYuIz6.js"
+}
 
 Write-Host "`nDeploy concluido: https://campanha.space" -ForegroundColor Green
 Write-Host "Teste Ver rua (aba anonima se ainda cachear)." -ForegroundColor DarkGray

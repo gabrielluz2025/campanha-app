@@ -6,7 +6,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const src = path.join(root, 'tmp-live.js')
 const outDir = path.join(root, 'deploy-hostinger', 'assets')
-const out = path.join(outDir, 'index-DhnYuIz6.js')
+// Nome novo fora do precache do service worker antigo
+const bundleName = 'index-verrua.js'
+const out = path.join(outDir, bundleName)
 const indexOut = path.join(root, 'deploy-hostinger', 'index.html')
 const indexSrc = path.join(root, 'tmp-live-index.html')
 
@@ -45,52 +47,43 @@ for (const [from, to] of reps) {
   if (replaceAll(from, to)) count++
 }
 
-// Desativa o panorama embutido (caixa preta vazia)
 const kpeNeedle =
   '(d==null?void 0:d.lat)&&(d==null?void 0:d.lng)&&r.jsx(kpe,{options:{position:{lat:d.lat,lng:d.lng},visible:!0'
 const kpePatch =
   'false&&r.jsx(kpe,{options:{position:{lat:0,lng:0},visible:!1'
 if (replaceAll(kpeNeedle, kpePatch, 'disable embedded StreetView panorama')) count++
 
+// Remove overlay "Voltar ao mapa" / caixa preta residual
+if (replaceAll('R&&r.jsxs("button",{type:"button",onClick:k,className:"streetview-exit"', 'false&&r.jsxs("button",{type:"button",onClick:k,className:"streetview-exit"', 'hide streetview-exit overlay')) count++
+
 fs.mkdirSync(outDir, { recursive: true })
 fs.writeFileSync(out, js)
+// Mantém cópia com nome antigo para compatibilidade
+fs.writeFileSync(path.join(outDir, 'index-DhnYuIz6.js'), js)
 
-// index.html com cache-bust + limpeza unica do service worker
-let html = fs.readFileSync(indexSrc, 'utf8')
-html = html.replace(
-  '<script type="module" crossorigin src="/assets/index-DhnYuIz6.js"></script>',
-  `<script>
+const swKill = `<script>
       (function () {
-        var key = 'campanha_sw_cleared_v3'
-        if (sessionStorage.getItem(key)) return
-        sessionStorage.setItem(key, '1')
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function (regs) {
-            regs.forEach(function (r) { r.unregister() })
-          })
-        }
-        if ('caches' in window) {
-          caches.keys().then(function (keys) {
-            keys.forEach(function (k) { caches.delete(k) })
-          })
-        }
+        try {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              regs.forEach(function (r) { r.unregister() })
+            })
+          }
+          if ('caches' in window) {
+            caches.keys().then(function (keys) {
+              keys.forEach(function (k) { caches.delete(k) })
+            })
+          }
+        } catch (e) {}
       })()
-    </script>
-    <script type="module" crossorigin src="/assets/index-DhnYuIz6.js?v=verrua3"></script>`
-)
+    </script>`
+
+let html = fs.readFileSync(indexSrc, 'utf8')
+// Remove script module antigo (com ou sem query string)
+html = html.replace(/<script type="module" crossorigin src="\/assets\/index-[^"]+\.js[^"]*"><\/script>\s*/g, '')
+html = html.replace('</head>', `${swKill}\n    <script type="module" crossorigin src="/assets/${bundleName}"></script>\n  </head>`)
+
 fs.writeFileSync(indexOut, html)
 
 console.log(`\nWrote ${out} (${js.length} bytes, ${count} patches)`)
-console.log(`Wrote ${indexOut}`)
-
-// sanity
-const checks = [
-  ['_e({lat', false],
-  ['onClick:()=>l==null?void 0:l(t),children:"Ver rua"', false],
-  ['false&&r.jsx(kpe,{options:{position:{lat:0,lng:0},visible:!1', true],
-  ['map_action=pano', true],
-]
-for (const [needle, want] of checks) {
-  const ok = js.includes(needle) === want
-  console.log(`${ok ? 'OK' : 'FAIL'}: ${needle}`)
-}
+console.log(`Wrote ${indexOut} -> /assets/${bundleName}`)
