@@ -1,0 +1,392 @@
+{
+  "1": {
+    "lat": -26.9081939,
+    "lng": -49.0728843,
+    "endereco": "Rua São Paulo, 890 - Victor Konder, Blumenau - SC"
+  },
+  "2": {
+    "lat": -26.9374173,
+    "lng": -49.0652577,
+    "endereco": "Rua Amazonas, 4243 - Garcia, Blumenau - SC"
+  },
+  "3": {
+    "lat": -26.9519321,
+    "lng": -49.0735684,
+    "endereco": "Rua Antônio Zendron, 2070 - Valparaíso, Blumenau - SC"
+  },
+  "4": {
+    "lat": -26.9758618,
+    "lng": -49.0486236,
+    "endereco": "Rua Brusque, 615 - Glória, Blumenau - SC"
+  },
+  "5": {
+    "lat": -26.9482339,
+    "lng": -49.0620015,
+    "endereco": "Rua Carlos Splitter, 63 - Garcia, Blumenau - SC"
+  },
+  "6": {
+    "lat": -26.9393907,
+    "lng": -49.0622622,
+    "endereco": "Rua Engenheiro Odebrecht, 695 - Garcia, Blumenau - SC"
+  },
+  "7": {
+    "lat": -26.9951955,
+    "lng": -49.0316812,
+    "endereco": "Rua Professor Osório de Carvalho, 320 - Gaspar Alto, Gaspar - SC"
+  },
+  "8": {
+    "lat": -26.8706437,
+    "lng": -49.1320487,
+    "endereco": "Rua Johann Sachse, 130 - Badenfurt, Blumenau - SC"
+  },
+  "9": {
+    "lat": -26.8882291,
+    "lng": -49.1295418,
+    "endereco": "Rua Heinrich Hemmer, 1794 - Badenfurt, Blumenau - SC"
+  },
+  "10": {
+    "lat": -26.8900605,
+    "lng": -49.1537704,
+    "endereco": "Rua Andorra, 46 - Badenfurt, Blumenau - SC"
+  },
+  "11": {
+    "lat": -26.8808897,
+    "lng": -49.1183979,
+    "endereco": "Rua João Batista Zandonai, 80 - Salto Norte, Blumenau - SC"
+  },
+  "12": {
+    "lat": -26.8548526,
+    "lng": -49.1584872,
+    "endereco": "Rua Bernardo Scheidemantel, 1340 - Testo Salto, Blumenau - SC"
+  },
+  "13": {
+    "lat": -26.8791794,
+    "lng": -49.0633354,
+    "endereco": "Rua Galileu Galilei, 79 - Fortaleza, Blumenau - SC"
+  },
+  "14": {
+    "lat": -26.8859244,
+    "lng": -49.0675295,
+    "endereco": "Rua 7 de Maio, 613 - Itoupava Norte, Blumenau - SC"
+  },
+  "15": {
+    "lat": -26.8700549,
+    "lng": -49.0494769,
+    "endereco": "Rua Hermann Tribess, 2028 - Tribess, Blumenau - SC"
+  },
+  "16": {
+    "lat": -26.88911,
+    "lng": -49.1105662,
+    "endereco": "Rua José Deeke, 909 - Escola Agrícola, Blumenau - SC"
+  },
+  "17": {
+    "lat": -26.8947581,
+    "lng": -49.1319268,
+    "endereco": "Rua Bahia, 5899 - Salto Weissbach, Blumenau - SC"
+  },
+  "18": {
+    "lat": -26.9029111,
+    "lng": -49.0994855,
+    "endereco": "Rua Coripós, 945 - Escola Agrícola, Blumenau - SC"
+  },
+  "19": {
+    "lat": -26.9288701,
+    "lng": -49.1224648,
+    "endereco": "Rua dos Caçadores, 2610 - Velha, Blumenau - SC"
+  },
+  "21": {
+    "lat": -26.9192693,
+    "lng": -49.1116158,
+    "endereco": "Rua Araucária, 238 - Velha, Blumenau - SC"
+  },
+  "22": {
+    "lat": -26.7965621,
+    "lng": -49.0867986,
+    "endereco": "Rua Dr. Pedro Zimmermann, 3449 - Itoupava Central, Blumenau - SC"
+  },
+  "23": {
+    "lat": -26.9018333,
+    "lng": -49.0470104,
+    "endereco": "Rua Konrad Adenauer, 50 - Ponta Aguda, Blumenau - SC"
+  },
+  "24": {
+    "lat": -26.8921138,
+    "lng": -49.0091314,
+    "endereco": "Rua Antonio Benedito de Amorim, 955 - Belchior Baixo, Gaspar - SC"
+  },
+  "25": {
+    "lat": -26.9100356,
+    "lng": -49.0545368,
+    "endereco": "Rua Gênova, 50 - Ponta Aguda, Blumenau - SC"
+  },
+  "26": {
+    "lat": -26.8998826,
+    "lng": -49.0558744,
+    "endereco": "Rua José Isidoro Corrêa, 102 - Ponta Aguda, Blumenau - SC"
+  },
+  "27": {
+    "lat": -26.8489154,
+    "lng": -49.0699571,
+    "endereco": "Rua Godofredo Rangel, 30 - Fidélis, Blumenau - SC"
+  },
+  "28": {
+    "lat": -26.8478102,
+    "lng": -49.0558351,
+    "endereco": "Rua Theodoro Pasold, 3159 - Fortaleza, Blumenau - SC"
+  },
+  "29": {
+    "lat": -26.8103873,
+    "lng": -49.0644172,
+    "endereco": "Rua Rogério Haag, 55 - Fidélis, Blumenau - SC"
+  },
+  "30": {
+    "lat": -26.8074474,
+    "lng": -49.0876996,
+    "endereco": "Rua Gustavo Zimmermann, 6991 - Itoupava Central, Blumenau - SC"
+  },
+  "31": {
+    "lat": -26.7498616,
+    "lng": -49.0924409,
+    "endereco": "Rua Paulo Zingel, 1180 - Itoupava Central, Blumenau - SC"
+  },
+  "32": {
+    "lat": -26.9488639,
+    "lng": -49.1327829,
+    "endereco": "Rua Rodolfo Frotschner, 203 - Velha Grande, Blumenau - SC"
+  },
+  "33": {
+    "lat": -26.9522166,
+    "lng": -49.1430461,
+    "endereco": "Rua Emil Wehmuth, 534 - Velha Grande, Blumenau, SC"
+  },
+  "35": {
+    "lat": -26.9486333,
+    "lng": -49.1293747,
+    "endereco": "Rua da Figueira, 19 - Velha Grande, Blumenau - SC"
+  },
+  "36": {
+    "lat": -26.9428825,
+    "lng": -49.1307245,
+    "endereco": "Rua da Comunidade, 128 - Velha Grande, Blumenau - SC"
+  },
+  "38": {
+    "lat": -26.9679798,
+    "lng": -49.1018696,
+    "endereco": "Rua Francisco Manoel dos Santos, S/N - Progresso, Blumenau - SC"
+  },
+  "39": {
+    "lat": -26.9722706,
+    "lng": -49.0853833,
+    "endereco": "Rua Rui Barbosa, 500 - Progresso, Blumenau - SC"
+  },
+  "41": {
+    "lat": -26.9072215,
+    "lng": -49.1116815,
+    "endereco": "Rua Eça de Queiroz, 790 - Água Verde, Blumenau - SC"
+  },
+  "42": {
+    "lat": -26.9240294,
+    "lng": -49.1020425,
+    "endereco": "Rua João Pessoa, 2511 - Velha, Blumenau - SC"
+  },
+  "43": {
+    "lat": -26.9053311,
+    "lng": -49.091009,
+    "endereco": "Rua Prudente de Moraes, 326 - Vila Nova, Blumenau - SC"
+  },
+  "44": {
+    "lat": -26.928382,
+    "lng": -49.0550358,
+    "endereco": "Rua Araranguá, 1151 - Garcia, Blumenau - SC"
+  },
+  "45": {
+    "lat": -26.9290665,
+    "lng": -49.0377815,
+    "endereco": "Rua Benígno Joaquim dos Santos, 29 - Ribeirão Fresco, Blumenau - SC"
+  },
+  "47": {
+    "lat": -26.9292494,
+    "lng": -49.0370367,
+    "endereco": "Rua Pastor Oswald Hesse, 526 - Ribeirão Fresco, Blumenau - SC,"
+  },
+  "48": {
+    "lat": -26.876134,
+    "lng": -49.0805395,
+    "endereco": "Rua 25 de Agosto, 34 - Itoupava Norte, Blumenau - SC"
+  },
+  "49": {
+    "lat": -26.8934083,
+    "lng": -49.0785851,
+    "endereco": "Rua Dois de Setembro, 2093 - Itoupava Norte, Blumenau - SC"
+  },
+  "50": {
+    "lat": -26.852379,
+    "lng": -49.1506964,
+    "endereco": "Rua Christiano Karsten, 1295 - Testo Salto, Blumenau - SC"
+  },
+  "51": {
+    "lat": -26.8609532,
+    "lng": -49.1371911,
+    "endereco": "R. Philipp Bauler, 1267 - Testo Salto, Blumenau - SC"
+  },
+  "52": {
+    "lat": -26.7193108,
+    "lng": -49.0595489,
+    "endereco": "Rua Dr. Pedro Zimmermann, 16170 - Vila Itoupava, Blumenau - SC"
+  },
+  "53": {
+    "lat": -26.7084582,
+    "lng": -49.0846578,
+    "endereco": "Rua Erwin Manzke, 14311 - Vila Itoupava, Blumenau - SC"
+  },
+  "54": {
+    "lat": -26.8592387,
+    "lng": -49.0470269,
+    "endereco": "Rua Francisco Vahldieck, 4613 - Fortaleza Alta, Blumenau - SC"
+  },
+  "55": {
+    "lat": -26.8192452,
+    "lng": -49.0217277,
+    "endereco": "Rua Bonifácio Haendchen, 4130 - Belchior Alto, Gaspar - SC"
+  },
+  "56": {
+    "lat": -26.9074849,
+    "lng": -49.1325961,
+    "endereco": "Rua Guilherme Poerner, 129 - Água Verde, Blumenau - SC"
+  },
+  "57": {
+    "lat": -26.9046239,
+    "lng": -49.1526809,
+    "endereco": "Rua Elvira Bornhofen, 51 - Passo Manso, Blumenau - SC"
+  },
+  "58": {
+    "lat": -26.9181591,
+    "lng": -49.1529596,
+    "endereco": "Rua Bruno Seibt, 246 - Passo Manso, Blumenau - SC"
+  },
+  "59": {
+    "lat": -26.9319561,
+    "lng": -49.1373554,
+    "endereco": "Rua Bernardo Reiter, 1611 - Velha Central, Blumenau - SC"
+  },
+  "60": {
+    "lat": -26.8608549,
+    "lng": -49.0859809,
+    "endereco": "Rua Frederico Jensen, 3511 - Itoupavazinha, Blumenau - SC"
+  },
+  "61": {
+    "lat": -26.8363935,
+    "lng": -49.1123582,
+    "endereco": "Rua Prof. Jacob Ineichen, 1341 - Itoupava Central, Blumenau - SC"
+  },
+  "62": {
+    "lat": -26.8548124,
+    "lng": -49.1079334,
+    "endereco": "Rua Frederico Bohringer, 754 - Itoupavazinha, Blumenau - SC"
+  },
+  "63": {
+    "lat": -26.8957634,
+    "lng": -49.0576085,
+    "endereco": "Rua Dep. Walter Vicente Gomes, 110 - Ponta Aguda, Blumenau - SC"
+  },
+  "64": {
+    "lat": -26.9006353,
+    "lng": -49.0673001,
+    "endereco": "Rua Frederico Deeke, 292 - Boa Vista, Blumenau - SC"
+  },
+  "66": {
+    "lat": -26.7676982,
+    "lng": -49.0770901,
+    "endereco": "Rua Gustavo Zimmermann, 2001 - Itoupava Central, Blumenau - SC"
+  },
+  "67": {
+    "lat": -26.8270792,
+    "lng": -49.0812768,
+    "endereco": "Rua George Fridrich Mordhorst, 29 - Itoupava Central, Blumenau - SC"
+  },
+  "68": {
+    "lat": -26.9374342,
+    "lng": -49.1477385,
+    "endereco": "Rua José Reuter, 3246 - Velha Central, Blumenau - SC"
+  },
+  "70": {
+    "lat": -26.958916,
+    "lng": -49.1758816,
+    "endereco": "Rua Tifa da Linguiça, 700 - Encano, Indaial - SC"
+  },
+  "71": {
+    "lat": -27.0118729,
+    "lng": -49.0673636,
+    "endereco": "Rua Jordão, 239 - Progresso, Blumenau - SC"
+  },
+  "72": {
+    "lat": -26.9973235,
+    "lng": -49.1026758,
+    "endereco": "Rua Santa Maria, 1119 - Progresso, Blumenau - SC"
+  },
+  "73": {
+    "lat": -26.9926165,
+    "lng": -49.1191175,
+    "endereco": "Rua Belmiro Colzani, 407 - Progresso, Blumenau - SC"
+  },
+  "74": {
+    "lat": -26.9148633,
+    "lng": -49.0495132,
+    "endereco": "Rua Pedro Krauss Sênior, 455 - Vorstadt, Blumenau - SC"
+  },
+  "75": {
+    "lat": -26.9151784,
+    "lng": -49.0574675,
+    "endereco": "Rua Itajaí, 5140 - Vorstadt, Blumenau - SC"
+  },
+  "76": {
+    "lat": -26.9043775,
+    "lng": -49.0357362,
+    "endereco": "Rua Sebastião Voss, 230 - Vorstadt, Blumenau - SC"
+  },
+  "77": {
+    "lat": -26.9250913,
+    "lng": -49.0475575,
+    "endereco": "Rua Boa Esperança, 260 - Ribeirão Fresco, Blumenau - SC"
+  },
+  "78": {
+    "lat": -26.8594872,
+    "lng": -49.1246683,
+    "endereco": "Rua Henrique Mette, 456 - Itoupavazinha, Blumenau - SC"
+  },
+  "79": {
+    "lat": -26.8649776,
+    "lng": -49.108871,
+    "endereco": "Rua Gustavo Frank, 105 - Salto Norte, Blumenau - SC"
+  },
+  "80": {
+    "lat": -26.8164133,
+    "lng": -49.1007239,
+    "endereco": "Rua Alex Borchardt, 774 - Itoupava Central, Blumenau - SC"
+  },
+  "82": {
+    "lat": -26.8738924,
+    "lng": -49.0688691,
+    "endereco": "Rua Fritz Koegler, 809 - Fortaleza, Blumenau - SC"
+  },
+  "83": {
+    "lat": -26.8822538,
+    "lng": -49.0443292,
+    "endereco": "Rua Salete, 22 - Nova Esperança, Blumenau - SC"
+  },
+  "85": {
+    "lat": -26.8603329,
+    "lng": -49.0941273,
+    "endereco": "Rua Frederico Jensen, 760 - Itoupavazinha, Blumenau - SC"
+  },
+  "86": {
+    "lat": -26.849554,
+    "lng": -49.1045014,
+    "endereco": "Rua Sibéria, 45 - Itoupavazinha, Blumenau - SC"
+  },
+  "87": {
+    "lat": -26.8002055,
+    "lng": -49.1090171,
+    "endereco": "Rua Professor Jacob Ineichen, 6405 - Itoupava Central, Blumenau - SC"
+  }
+}

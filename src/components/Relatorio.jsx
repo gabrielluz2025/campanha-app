@@ -1,393 +1,605 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  FileText, Download, Printer, TrendingUp, Users, MapPin,
-  CalendarDays, Package, ClipboardList, Heart, CheckCircle,
-  AlertTriangle, BarChart3, ChevronDown, ChevronUp,
+  FileText, Download, Printer, Copy, Check, ChevronRight,
+  BarChart3, Users, UserCheck, Church, CalendarDays, Package,
+  Heart, Building2, Wallet, Route, ClipboardList, Briefcase,
+  TrendingUp, AlertTriangle, Filter, X,
 } from 'lucide-react'
+import { PageHeader, ModuleWrap, Button, Pill } from './ui'
+import { copiarTexto } from '../utils/equipeContratoReport'
+import { CARGOS } from '../utils/equipeSync'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell,
-} from 'recharts'
+  CATEGORIAS_GASTO, cargosComDados, categoriasComDados,
+} from '../utils/cargosGastosReport'
+import {
+  CATALOGO, coletarSnapshot, montarRelatorio,
+  abrirJanelaImpressao, baixarJson, baixarTexto, inicioSemanaIso,
+} from '../utils/relatoriosHub'
+import { baixarRelatorioXlsx, baixarTodosRelatoriosXlsx } from '../utils/relatoriosXlsx'
+import { useCanViewFinance } from '../context/AccessContext'
+import { RELATORIOS_FINANCEIROS } from '../utils/acessoAbas'
 
-const CORES = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#06b6d4', '#84cc16']
+const ICONES = {
+  semanal: TrendingUp,
+  eleitores: BarChart3,
+  equipe: Users,
+  indicacoes: UserCheck,
+  contratos: Briefcase,
+  igrejas: Church,
+  agenda: CalendarDays,
+  materiais: Package,
+  apoiadores: Heart,
+  empresas: Building2,
+  previsao: Wallet,
+  'cargos-gastos': Filter,
+  rotas: Route,
+  pesquisas: ClipboardList,
+}
+
+const FILTROS_VAZIOS = {
+  cargos: [],
+  categorias: [],
+  minValor: '',
+  maxValor: '',
+  soComValor: false,
+  escopo: 'todos',
+}
+
+const FILTROS_IND_VAZIOS = {
+  indicadorId: '',
+  soPendencias: false,
+}
+
+function semanaIsoHoje() {
+  return inicioSemanaIso().toISOString().slice(0, 10)
+}
+
+function toggleInList(list, item) {
+  return list.includes(item) ? list.filter(x => x !== item) : [...list, item]
+}
 
 export default function Relatorio() {
-  const [semana, setSemana] = useState(() => {
-    const d = new Date()
-    const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-    return new Date(d.setDate(diff)).toISOString().split('T')[0]
-  })
+  const canViewFinance = useCanViewFinance()
+  const [semana, setSemana] = useState(semanaIsoHoje)
+  const [ativo, setAtivo] = useState('semanal')
+  const [msg, setMsg] = useState('')
+  const [copiado, setCopiado] = useState(false)
+  const [filtrosCG, setFiltrosCG] = useState(FILTROS_VAZIOS)
+  const [filtrosInd, setFiltrosInd] = useState(FILTROS_IND_VAZIOS)
 
-  // Gather data from all modules
-  const dados = useMemo(() => {
-    const weekStart = new Date(semana)
-    const weekEnd = new Date(semana)
-    weekEnd.setDate(weekEnd.getDate() + 6)
-    weekEnd.setHours(23, 59, 59)
+  const catalogoVisivel = useMemo(
+    () => canViewFinance
+      ? CATALOGO
+      : CATALOGO.filter(c => !RELATORIOS_FINANCEIROS.includes(c.id)),
+    [canViewFinance],
+  )
 
-    const inWeek = (dateStr) => {
-      const d = new Date(dateStr)
-      return d >= weekStart && d <= weekEnd
+  useEffect(() => {
+    if (!catalogoVisivel.some(c => c.id === ativo)) {
+      setAtivo(catalogoVisivel[0]?.id || 'semanal')
     }
+  }, [catalogoVisivel, ativo])
 
-    // Agenda
-    const eventos = JSON.parse(localStorage.getItem('agenda_eventos') || '[]')
-    const eventosSemana = eventos.filter(e => {
-      const d = new Date(e.data)
-      return d >= weekStart && d <= weekEnd
+  const snap = useMemo(() => coletarSnapshot({ semanaInicioIso: semana }), [semana])
+  const filtrosAtivos = ativo === 'cargos-gastos'
+    ? filtrosCG
+    : ativo === 'indicacoes'
+      ? filtrosInd
+      : undefined
+  const rel = useMemo(
+    () => montarRelatorio(ativo, snap, filtrosAtivos),
+    [ativo, snap, filtrosCG, filtrosInd],
+  )
+  const meta = catalogoVisivel.find(c => c.id === ativo) || catalogoVisivel[0] || CATALOGO[0]
+
+  const indicadoresOpts = useMemo(
+    () => (snap.indicadores || []).slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+    [snap.indicadores],
+  )
+
+  const cargosOpts = useMemo(() => {
+    const com = new Set(cargosComDados())
+    return CARGOS.filter(c => com.has(c) || filtrosCG.cargos.includes(c))
+  }, [filtrosCG.cargos, snap])
+
+  const catsOpts = useMemo(() => {
+    const com = new Set(categoriasComDados())
+    return CATEGORIAS_GASTO.filter(c => com.has(c) || filtrosCG.categorias.includes(c))
+  }, [filtrosCG.categorias, snap])
+
+  const grupos = useMemo(() => {
+    const map = new Map()
+    catalogoVisivel.forEach(c => {
+      if (!map.has(c.grupo)) map.set(c.grupo, [])
+      map.get(c.grupo).push(c)
     })
+    return [...map.entries()]
+  }, [catalogoVisivel])
 
-    // Equipe
-    const tarefas = JSON.parse(localStorage.getItem('equipe_tarefas') || '[]')
-    const tarefasConcluidas = tarefas.filter(t => t.status === 'concluida').length
-    const tarefasPendentes = tarefas.filter(t => t.status === 'pendente').length
-    const tarefasAndamento = tarefas.filter(t => t.status === 'em_andamento').length
-    const membros = JSON.parse(localStorage.getItem('equipe_membros') || '[]')
-
-    // Igrejas
-    const visitas = JSON.parse(localStorage.getItem('igrejas_visitas') || '{}')
-    const visitadas = Object.values(visitas).filter(Boolean).length
-    const totalIgrejas = 88
-
-    // Materiais
-    const materiaisItens = JSON.parse(localStorage.getItem('materiais_estoque') || '[]')
-    const distribuicoes = JSON.parse(localStorage.getItem('materiais_distribuicao') || '[]')
-    const distSemana = distribuicoes.filter(d => inWeek(d.data))
-    const totalDistSemana = distSemana.reduce((s, d) => s + d.quantidade, 0)
-
-    // Pesquisas
-    const enquetes = JSON.parse(localStorage.getItem('pesquisas_enquetes') || '[]')
-    const respostas = JSON.parse(localStorage.getItem('pesquisas_respostas') || '{}')
-    const totalRespostas = Object.values(respostas).reduce((s, arr) => s + arr.length, 0)
-    const respostasSemana = Object.values(respostas).flat().filter(r => inWeek(r.data)).length
-
-    // Apoiadores
-    const apoiadores = JSON.parse(localStorage.getItem('apoiadores_lista') || '[]')
-    const apoiadoresSemana = apoiadores.filter(a => inWeek(a.criadoEm)).length
-    const interacoes = JSON.parse(localStorage.getItem('apoiadores_interacoes') || '{}')
-    const totalInteracoes = Object.values(interacoes).flat().length
-    const interacoesSemana = Object.values(interacoes).flat().filter(i => inWeek(i.data)).length
-
-    // Eleitores
-    const metaGlobal = parseInt(localStorage.getItem('meta_global_votos') || '0')
-    const dadosEleitores = JSON.parse(localStorage.getItem('eleitores_data') || '{}')
-    let totalVotos = 0
-    if (dadosEleitores.zonas) {
-      dadosEleitores.zonas.forEach(z => {
-        z.locais.forEach(l => { l.secoes.forEach(s => { totalVotos += s.votos }) })
-      })
-    }
-
-    // Distribuição por bairro
-    const distPorBairro = {}
-    distSemana.forEach(d => {
-      distPorBairro[d.bairro] = (distPorBairro[d.bairro] || 0) + d.quantidade
-    })
-    const distBairroData = Object.entries(distPorBairro)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([name, value]) => ({ name, value }))
-
-    // Apoiadores por nível
-    const porNivel = { simpatizante: 0, apoiador: 0, cabo_eleitoral: 0, lider: 0 }
-    apoiadores.forEach(a => { if (porNivel[a.nivel] !== undefined) porNivel[a.nivel]++ })
-    const nivelData = [
-      { name: 'Simpatizantes', value: porNivel.simpatizante },
-      { name: 'Apoiadores', value: porNivel.apoiador },
-      { name: 'Cabos Eleitorais', value: porNivel.cabo_eleitoral },
-      { name: 'Líderes', value: porNivel.lider },
-    ]
-
-    // Tarefas status
-    const tarefasData = [
-      { name: 'Concluídas', value: tarefasConcluidas },
-      { name: 'Em Andamento', value: tarefasAndamento },
-      { name: 'Pendentes', value: tarefasPendentes },
-    ]
-
-    return {
-      eventosSemana: eventosSemana.length,
-      totalEventos: eventos.length,
-      tarefasConcluidas, tarefasPendentes, tarefasAndamento, totalTarefas: tarefas.length,
-      membros: membros.length,
-      visitadas, totalIgrejas,
-      materiaisItens: materiaisItens.length,
-      totalDistSemana,
-      totalDist: distribuicoes.reduce((s, d) => s + d.quantidade, 0),
-      enquetesAtivas: enquetes.filter(e => e.status === 'ativa').length,
-      totalRespostas, respostasSemana,
-      totalApoiadores: apoiadores.length, apoiadoresSemana,
-      totalInteracoes, interacoesSemana,
-      metaGlobal, totalVotos,
-      distBairroData, nivelData, tarefasData,
-      weekStart, weekEnd,
-    }
-  }, [semana])
-
-  function formatDate(d) { return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) }
-
-  function imprimirRelatorio() { window.print() }
-
-  function exportarJSON() {
-    const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'relatorio-semanal-' + semana + '.json'
-    a.click()
-    URL.revokeObjectURL(url)
+  async function flash(t) {
+    setMsg(t)
+    setTimeout(() => setMsg(''), 2500)
   }
 
-  const pctMeta = dados.metaGlobal > 0 ? Math.min(100, Math.round(dados.totalVotos / dados.metaGlobal * 100)) : 0
-  const pctIgrejas = Math.round(dados.visitadas / dados.totalIgrejas * 100)
+  async function copiar() {
+    const ok = await copiarTexto(rel.texto || '')
+    setCopiado(ok)
+    await flash(ok ? 'Texto copiado!' : 'Falha ao copiar')
+    if (ok) setTimeout(() => setCopiado(false), 2000)
+  }
+
+  function imprimir() {
+    const res = abrirJanelaImpressao(rel.html, rel.titulo)
+    if (!res.ok) flash('Permita pop-ups para gerar o PDF')
+  }
+
+  function exportarJson() {
+    baixarJson({
+      relatorio: ativo,
+      geradoEm: new Date().toISOString(),
+      periodo: {
+        inicio: snap.weekStart.toISOString(),
+        fim: snap.weekEnd.toISOString(),
+      },
+      filtros: ativo === 'cargos-gastos'
+        ? filtrosCG
+        : ativo === 'indicacoes'
+          ? filtrosInd
+          : undefined,
+      dados: rel.json,
+    }, `relatorio-${ativo}-${semana}.json`)
+    flash('JSON baixado')
+  }
+
+  function exportarTxt() {
+    baixarTexto(rel.texto || '', `relatorio-${ativo}-${semana}.txt`)
+    flash('TXT baixado')
+  }
+
+  async function exportarXlsx() {
+    try {
+      await baixarRelatorioXlsx(
+        ativo,
+        snap,
+        filtrosAtivos || {},
+        `relatorio-${ativo}-${semana}.xlsx`,
+      )
+      flash('XLSX baixado · só o relatório selecionado')
+    } catch (err) {
+      console.error(err)
+      flash('Falha ao gerar XLSX')
+    }
+  }
+
+  async function exportarTodosXlsx() {
+    try {
+      const r = await baixarTodosRelatoriosXlsx(snap, {
+        filtrosCG,
+        filtrosInd,
+        semana,
+      })
+      flash(`XLSX completo · ${r.qtd} abas`)
+    } catch (err) {
+      console.error(err)
+      flash('Falha ao gerar XLSX completo')
+    }
+  }
+
+  const periodoLabel = `${snap.weekStart.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} — ${snap.weekEnd.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`
+  const filtrosCount = (filtrosCG.cargos.length + filtrosCG.categorias.length
+    + (filtrosCG.minValor !== '' ? 1 : 0)
+    + (filtrosCG.maxValor !== '' ? 1 : 0)
+    + (filtrosCG.soComValor ? 1 : 0)
+    + (filtrosCG.escopo !== 'todos' ? 1 : 0))
+  const filtrosIndCount = (filtrosInd.indicadorId ? 1 : 0) + (filtrosInd.soPendencias ? 1 : 0)
 
   return (
-    <div className="flex-1 overflow-auto" >
-      {/* Hero */}
-      <div className="px-4 md:px-6 pt-7 pb-16"
-        style={{ background: 'linear-gradient(135deg,#0f172a 0%,#1e3a8a 60%,#1d4ed8 100%)' }}>
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-7">
-            <div className="flex items-center gap-4">
-              <div className="w-13 h-13 rounded-2xl flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(255,255,255,0.18)', width: 52, height: 52 }}>
-                <FileText size={26} className="text-white" />
+    <div className="flex-1 overflow-auto" style={{ background: 'var(--bg-base)' }}>
+      <ModuleWrap className="pb-10">
+        <PageHeader
+          icon={FileText}
+          title="Central de Relatórios"
+          subtitle="Todos os relatórios da campanha · impressão, PDF, XLSX, cópia e exportação"
+          actions={
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-tertiary)' }}>Semana</span>
+                <input
+                  type="date"
+                  value={semana}
+                  onChange={e => setSemana(e.target.value)}
+                  className="input-dark px-3 py-2 rounded-xl text-sm font-bold"
+                  style={{ colorScheme: 'dark' }}
+                />
               </div>
-              <div>
-                <h1 className="font-black text-white" style={{ fontSize: 24 }}>Relatório Semanal</h1>
-                <p className="text-blue-200 mt-0.5" style={{ fontSize: 12 }}>
-                  Visão consolidada de todas as atividades da campanha
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="date" value={semana} onChange={e => setSemana(e.target.value)}
-                className="px-4 py-2.5 rounded-2xl text-sm font-bold bg-transparent text-white"
-                style={{ border: '1px solid rgba(255,255,255,0.3)', colorScheme: 'dark' }} />
-              <button onClick={exportarJSON}
-                className="flex items-center gap-2 font-bold text-white px-4 py-2.5 rounded-2xl transition-all"
-                style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', fontSize: 13 }}>
-                <Download size={16} /> Exportar
-              </button>
-              <button onClick={imprimirRelatorio}
-                className="flex items-center gap-2 font-bold text-white px-4 py-2.5 rounded-2xl transition-all"
-                style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', fontSize: 13 }}>
-                <Printer size={16} /> Imprimir
-              </button>
-            </div>
-          </div>
+              {canViewFinance && (
+                <Button icon={Download} variant="ghost" onClick={exportarTodosXlsx}>Todos XLSX</Button>
+              )}
+              <Button icon={Download} variant="ghost" onClick={exportarXlsx}>XLSX</Button>
+              <Button icon={Download} variant="ghost" onClick={exportarJson}>JSON</Button>
+              <Button icon={Printer} onClick={imprimir}>Imprimir / PDF</Button>
+            </>
+          }
+        />
 
-          <div className="px-4 py-3 rounded-2xl mb-5"
-            style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)' }}>
-            <p className="text-blue-200 font-bold" style={{ fontSize: 12 }}>
-              Período: {formatDate(dados.weekStart)} — {formatDate(dados.weekEnd)}
-            </p>
-          </div>
+        <p className="mb-4" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+          Período de referência: <strong style={{ color: 'var(--gold-bright)' }}>{periodoLabel}</strong>
+          {' · '}semana calendário (segunda–domingo)
+          {' · '}{catalogoVisivel.length} tipos de relatório
+          {!canViewFinance ? ' · financeiro oculto' : ''}
+        </p>
 
-          {/* KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-            {[
-              { label: 'Eventos Semana', valor: dados.eventosSemana, icon: CalendarDays, cor: '#3b82f6' },
-              { label: 'Membros Equipe', valor: dados.membros, icon: Users, cor: '#10b981' },
-              { label: 'Igrejas Visitadas', valor: dados.visitadas + '/' + dados.totalIgrejas, icon: MapPin, cor: '#f59e0b' },
-              { label: 'Tarefas OK', valor: dados.tarefasConcluidas + '/' + dados.totalTarefas, icon: CheckCircle, cor: '#06b6d4' },
-              { label: 'Material Dist.', valor: dados.totalDistSemana, icon: Package, cor: '#ec4899' },
-              { label: 'Respostas Semana', valor: dados.respostasSemana, icon: ClipboardList, cor: '#06b6d4' },
-              { label: 'Novos Apoiadores', valor: dados.apoiadoresSemana, icon: Heart, cor: '#f97316' },
-              { label: 'Interações', valor: dados.interacoesSemana, icon: BarChart3, cor: '#84cc16' },
-            ].map(kpi => {
-              const Icon = kpi.icon
-              return (
-                <div key={kpi.label} className="rounded-2xl px-3 py-3"
-                  style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)' }}>
-                  <Icon size={14} className="text-blue-300 mb-1" />
-                  <p className="font-black text-white" style={{ fontSize: 18 }}>{kpi.valor}</p>
-                  <p className="text-blue-300" style={{ fontSize: 9 }}>{kpi.label}</p>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+          <aside className="xl:col-span-4 space-y-4">
+            {grupos.map(([grupo, itens]) => (
+              <div key={grupo} className="rounded-2xl p-3"
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                <p className="eyebrow px-1 mb-2" style={{ color: 'var(--gold)' }}>{grupo}</p>
+                <div className="space-y-1">
+                  {itens.map(c => {
+                    const Icon = ICONES[c.id] || FileText
+                    const on = ativo === c.id
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setAtivo(c.id)}
+                        className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
+                        style={{
+                          background: on ? 'rgba(212,175,95,0.12)' : 'transparent',
+                          border: on ? '1px solid rgba(212,175,95,0.35)' : '1px solid transparent',
+                        }}
+                      >
+                        <div className="flex items-center justify-center rounded-lg flex-shrink-0 mt-0.5"
+                          style={{ width: 32, height: 32, background: c.cor + '22' }}>
+                          <Icon size={15} style={{ color: c.cor }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold truncate" style={{
+                            fontSize: 13,
+                            color: on ? 'var(--gold-bright)' : 'var(--text-primary)',
+                          }}>
+                            {c.titulo}
+                          </p>
+                          <p className="truncate" style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            {c.desc}
+                          </p>
+                        </div>
+                        <ChevronRight size={14} className="flex-shrink-0 mt-1"
+                          style={{ color: on ? 'var(--gold)' : 'var(--text-faint)' }} />
+                      </button>
+                    )
+                  })}
                 </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 pb-10 -mt-10 space-y-5">
-        {/* Progress bars */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Meta de Votos */}
-          <div className="surface rounded-3xl p-6" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
-            <h3 className="font-bold txt-1 flex items-center gap-2 mb-4" style={{ fontSize: 14 }}>
-              <TrendingUp size={16} className="text-blue-500" /> Progresso da Meta de Votos
-            </h3>
-            <div className="flex items-baseline gap-2 mb-3">
-              <span className="text-3xl font-black txt-1">{pctMeta}%</span>
-              <span className="text-sm txt-3">
-                {dados.totalVotos.toLocaleString()} / {dados.metaGlobal.toLocaleString()} votos
-              </span>
-            </div>
-            <div className="h-4 srf-soft rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all"
-                style={{
-                  width: pctMeta + '%',
-                  background: pctMeta >= 80 ? 'linear-gradient(90deg,#10b981,#059669)' : pctMeta >= 50 ? 'linear-gradient(90deg,#f59e0b,#d97706)' : 'linear-gradient(90deg,#ef4444,#dc2626)',
-                }} />
-            </div>
-            {pctMeta < 80 && (
-              <div className="flex items-center gap-2 mt-3 text-xs font-semibold" style={{ color: '#fbbf24' }}>
-                <AlertTriangle size={12} /> Meta abaixo de 80% — intensificar campanha
               </div>
-            )}
-          </div>
+            ))}
+          </aside>
 
-          {/* Cobertura Igrejas */}
-          <div className="surface rounded-3xl p-6" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
-            <h3 className="font-bold txt-1 flex items-center gap-2 mb-4" style={{ fontSize: 14 }}>
-              <MapPin size={16} className="text-amber-500" /> Cobertura de Igrejas
-            </h3>
-            <div className="flex items-baseline gap-2 mb-3">
-              <span className="text-3xl font-black txt-1">{pctIgrejas}%</span>
-              <span className="text-sm txt-3">
-                {dados.visitadas} de {dados.totalIgrejas} igrejas visitadas
-              </span>
-            </div>
-            <div className="h-4 srf-soft rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all"
-                style={{
-                  width: pctIgrejas + '%',
-                  background: 'linear-gradient(90deg,#f59e0b,#f97316)',
-                }} />
-            </div>
-            <p className="text-xs txt-3 mt-3">
-              Restam {dados.totalIgrejas - dados.visitadas} igrejas para visitar
-            </p>
-          </div>
-        </div>
-
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Tarefas */}
-          <div className="surface rounded-3xl p-6" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
-            <h3 className="font-bold txt-1 mb-4" style={{ fontSize: 14 }}>Status das Tarefas</h3>
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie data={dados.tarefasData} cx="50%" cy="50%" innerRadius={45} outerRadius={70}
-                  paddingAngle={3} dataKey="value">
-                  <Cell fill="#10b981" />
-                  <Cell fill="#3b82f6" />
-                  <Cell fill="#f59e0b" />
-                </Pie>
-                <Tooltip formatter={(v) => [v + ' tarefas']}
-                  contentStyle={{ borderRadius: 12, background: 'rgba(13,17,28,0.97)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontSize: 11, color: '#fff' }} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex justify-center gap-4 mt-2">
-              {[{ l: 'Concluídas', c: '#10b981' }, { l: 'Andamento', c: '#3b82f6' }, { l: 'Pendentes', c: '#f59e0b' }].map(x => (
-                <div key={x.l} className="flex items-center gap-1.5 text-xs txt-3">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: x.c }} /> {x.l}
+          <section className="xl:col-span-8 space-y-4">
+            <div className="rounded-3xl p-5 md:p-6"
+              style={{
+                background: 'linear-gradient(160deg, rgba(212,175,95,0.10), var(--bg-surface))',
+                border: '1px solid rgba(212,175,95,0.28)',
+              }}>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                <div>
+                  <Pill color={meta.cor}>{meta.grupo}</Pill>
+                  <h2 className="font-extrabold mt-2" style={{ fontSize: 22, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                    {rel.titulo}
+                  </h2>
+                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>{meta.desc}</p>
                 </div>
-              ))}
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={copiar}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold"
+                    style={{ fontSize: 11, background: 'var(--bg-raised)', color: 'var(--text-secondary)' }}>
+                    {copiado ? <Check size={13} /> : <Copy size={13} />}
+                    {copiado ? 'Copiado' : 'Copiar'}
+                  </button>
+                  <button type="button" onClick={exportarTxt}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold"
+                    style={{ fontSize: 11, background: 'var(--bg-raised)', color: 'var(--text-secondary)' }}>
+                    <Download size={13} /> TXT
+                  </button>
+                  <button type="button" onClick={exportarXlsx}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold"
+                    style={{
+                      fontSize: 11,
+                      background: 'rgba(52,211,153,0.14)',
+                      color: '#34d399',
+                      border: '1px solid rgba(52,211,153,0.35)',
+                    }}>
+                    <Download size={13} /> XLSX
+                  </button>
+                  <button type="button" onClick={exportarJson}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold"
+                    style={{ fontSize: 11, background: 'var(--bg-raised)', color: 'var(--text-secondary)' }}>
+                    <Download size={13} /> JSON
+                  </button>
+                  <button type="button" onClick={imprimir}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-on-solid"
+                    style={{ fontSize: 11, background: 'linear-gradient(135deg,#eab308,#ca8a04)', color: '#1a1408' }}>
+                    <Printer size={13} /> Imprimir / PDF
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {(rel.kpis || []).map(k => (
+                  <div key={k.l} className="rounded-xl px-3 py-3"
+                    style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
+                    <p className="eyebrow" style={{ color: 'var(--text-faint)' }}>{k.l}</p>
+                    <p className="font-bold tnum mt-1" style={{ fontSize: 20, color: 'var(--gold-bright)', lineHeight: 1.1 }}>
+                      {k.v}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Apoiadores por nível */}
-          <div className="surface rounded-3xl p-6" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
-            <h3 className="font-bold txt-1 mb-4" style={{ fontSize: 14 }}>Rede de Apoiadores</h3>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={dados.nivelData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
-                <XAxis dataKey="name" tick={{ fontSize: 9, fill: 'rgba(203,213,235,0.55)' }} />
-                <YAxis tick={{ fontSize: 10, fill: 'rgba(203,213,235,0.55)' }} />
-                <Tooltip contentStyle={{ borderRadius: 12, background: 'rgba(13,17,28,0.97)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontSize: 11, color: '#fff' }} />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {dados.nivelData.map((_, i) => <Cell key={i} fill={CORES[i]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <p className="text-center text-xs txt-3 mt-2">Total: {dados.totalApoiadores} apoiadores</p>
-          </div>
+            {ativo === 'indicacoes' && (
+              <div className="rounded-3xl p-4 md:p-5 space-y-4"
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Filter size={15} style={{ color: '#fbbf24' }} />
+                    <p className="font-bold" style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+                      Filtrar por indicador
+                    </p>
+                    {filtrosIndCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-md font-bold"
+                        style={{ fontSize: 10, background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>
+                        {filtrosIndCount} ativo{filtrosIndCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                  {filtrosIndCount > 0 && (
+                    <button type="button" onClick={() => setFiltrosInd(FILTROS_IND_VAZIOS)}
+                      className="inline-flex items-center gap-1 font-bold"
+                      style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      <X size={12} /> Limpar
+                    </button>
+                  )}
+                </div>
 
-          {/* Distribuição por bairro */}
-          <div className="surface rounded-3xl p-6" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
-            <h3 className="font-bold txt-1 mb-4" style={{ fontSize: 14 }}>Material por Bairro (semana)</h3>
-            {dados.distBairroData.length === 0 ? (
-              <div className="text-center py-12 txt-3 text-sm">Nenhuma distribuição nesta semana</div>
-            ) : (
-              <div className="space-y-2.5">
-                {dados.distBairroData.map((d, i) => {
-                  const max = dados.distBairroData[0]?.value || 1
+                <div>
+                  <label className="eyebrow mb-1.5 block" style={{ color: 'var(--text-faint)' }}>
+                    Quem indicou
+                  </label>
+                  <select
+                    value={filtrosInd.indicadorId}
+                    onChange={e => setFiltrosInd(f => ({ ...f, indicadorId: e.target.value }))}
+                    className="input-dark w-full px-3 py-2.5 rounded-xl font-semibold"
+                    style={{ fontSize: 13 }}
+                  >
+                    <option value="">Todos os indicadores ({indicadoresOpts.length})</option>
+                    {indicadoresOpts.map(g => (
+                      <option key={g.id} value={g.id}>
+                        {g.nome} · {g.total} indicado{g.total !== 1 ? 's' : ''}
+                        {g.comPendencias ? ` · ${g.comPendencias} pend.` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {filtrosInd.indicadorId && (() => {
+                  const g = indicadoresOpts.find(x => x.id === filtrosInd.indicadorId)
+                  if (!g) return null
                   return (
-                    <div key={d.name} className="flex items-center gap-2">
-                      <span className="text-xs font-semibold txt-3 w-24 truncate">{d.name}</span>
-                      <div className="flex-1 h-5 srf-soft rounded-full overflow-hidden">
-                        <div className="h-full rounded-full"
-                          style={{ width: (d.value / max * 100) + '%', backgroundColor: CORES[i % CORES.length] }} />
-                      </div>
-                      <span className="text-xs font-bold txt-2 w-10 text-right">{d.value}</span>
+                    <div className="rounded-2xl px-3.5 py-3"
+                      style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}>
+                      <p className="font-bold" style={{ fontSize: 13, color: '#fbbf24' }}>{g.nome}</p>
+                      <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                        {g.total} indicado{g.total !== 1 ? 's' : ''}
+                        {g.comPendencias ? ` · ${g.comPendencias} com pendência` : ' · nenhum com pendência'}
+                        {g.telefone ? ` · ${g.telefone}` : ''}
+                      </p>
                     </div>
                   )
-                })}
+                })()}
+
+                <label className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl cursor-pointer"
+                  style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
+                  <input type="checkbox" checked={filtrosInd.soPendencias}
+                    onChange={e => setFiltrosInd(f => ({ ...f, soPendencias: e.target.checked }))}
+                    style={{ accentColor: '#fbbf24' }} />
+                  <span className="font-semibold" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    Mostrar só indicados com pendências de cadastro
+                  </span>
+                </label>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div className="surface rounded-3xl p-6" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
-            <h3 className="font-bold txt-1 mb-4 flex items-center gap-2" style={{ fontSize: 14 }}>
-              <CheckCircle size={16} className="text-green-500" /> Destaques da Semana
-            </h3>
-            <div className="space-y-3">
-              {[
-                { texto: dados.eventosSemana + ' eventos realizados', ok: dados.eventosSemana > 0 },
-                { texto: dados.apoiadoresSemana + ' novos apoiadores cadastrados', ok: dados.apoiadoresSemana > 0 },
-                { texto: dados.respostasSemana + ' respostas de pesquisa coletadas', ok: dados.respostasSemana > 0 },
-                { texto: dados.totalDistSemana + ' materiais distribuídos', ok: dados.totalDistSemana > 0 },
-                { texto: dados.interacoesSemana + ' interações com apoiadores', ok: dados.interacoesSemana > 0 },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  {item.ok ? <CheckCircle size={14} className="text-green-500 flex-shrink-0" /> : <AlertTriangle size={14} className="txt-4 flex-shrink-0" />}
-                  <span className={'text-sm ' + (item.ok ? 'txt-2' : 'txt-3')}>{item.texto}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="surface rounded-3xl p-6" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
-            <h3 className="font-bold txt-1 mb-4 flex items-center gap-2" style={{ fontSize: 14 }}>
-              <AlertTriangle size={16} className="text-amber-500" /> Pontos de Atenção
-            </h3>
-            <div className="space-y-3">
-              {(() => {
-                const alertas = []
-                if (pctMeta < 50) alertas.push({ msg: 'Meta de votos abaixo de 50% — ação urgente necessária', tipo: 'critico' })
-                else if (pctMeta < 80) alertas.push({ msg: 'Meta de votos abaixo de 80% — intensificar campanha', tipo: 'alerta' })
-                if (pctIgrejas < 50) alertas.push({ msg: 'Menos de 50% das igrejas visitadas', tipo: 'alerta' })
-                if (dados.tarefasPendentes > 5) alertas.push({ msg: dados.tarefasPendentes + ' tarefas pendentes acumuladas', tipo: 'alerta' })
-                if (dados.eventosSemana === 0) alertas.push({ msg: 'Nenhum evento na semana — planejar atividades', tipo: 'alerta' })
-                if (dados.apoiadoresSemana === 0) alertas.push({ msg: 'Nenhum apoiador novo — expandir rede', tipo: 'aviso' })
-                if (alertas.length === 0) alertas.push({ msg: 'Tudo em dia! Continue o bom trabalho.', tipo: 'ok' })
-                const alertStyle = (tipo) => ({
-                  critico: { background:'rgba(239,68,68,0.10)', border:'1px solid rgba(239,68,68,0.22)' },
-                  alerta:  { background:'rgba(245,158,11,0.10)', border:'1px solid rgba(245,158,11,0.22)' },
-                  aviso:   { background:'rgba(59,130,246,0.10)', border:'1px solid rgba(59,130,246,0.22)' },
-                  ok:      { background:'rgba(16,185,129,0.10)', border:'1px solid rgba(16,185,129,0.22)' },
-                })[tipo]
-                const alertIcon = { critico:'#f87171', alerta:'#fbbf24', aviso:'#60a5fa', ok:'#34d399' }
-                return alertas.map((a, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={alertStyle(a.tipo)}>
-                    {a.tipo === 'ok'
-                      ? <CheckCircle size={14} style={{ color: alertIcon.ok, flexShrink: 0 }} />
-                      : <AlertTriangle size={14} style={{ color: alertIcon[a.tipo], flexShrink: 0 }} />}
-                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{a.msg}</span>
+            {ativo === 'cargos-gastos' && (
+              <div className="rounded-3xl p-4 md:p-5 space-y-4"
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Filter size={15} style={{ color: 'var(--gold)' }} />
+                    <p className="font-bold" style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+                      Filtros
+                    </p>
+                    {filtrosCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-md font-bold"
+                        style={{ fontSize: 10, background: 'rgba(212,175,95,0.15)', color: 'var(--gold-bright)' }}>
+                        {filtrosCount} ativo{filtrosCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
                   </div>
-                ))
-              })()}
+                  {filtrosCount > 0 && (
+                    <button type="button" onClick={() => setFiltrosCG(FILTROS_VAZIOS)}
+                      className="inline-flex items-center gap-1 font-bold"
+                      style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      <X size={12} /> Limpar
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <p className="eyebrow mb-2" style={{ color: 'var(--text-faint)' }}>Cargo</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {cargosOpts.map(c => {
+                      const on = filtrosCG.cargos.includes(c)
+                      return (
+                        <button key={c} type="button"
+                          onClick={() => setFiltrosCG(f => ({ ...f, cargos: toggleInList(f.cargos, c) }))}
+                          className="px-2.5 py-1.5 rounded-lg font-bold"
+                          style={{
+                            fontSize: 11,
+                            background: on ? 'rgba(212,175,95,0.2)' : 'var(--bg-raised)',
+                            color: on ? 'var(--gold-bright)' : 'var(--text-secondary)',
+                            border: on ? '1px solid rgba(212,175,95,0.4)' : '1px solid transparent',
+                          }}>
+                          {c}
+                        </button>
+                      )
+                    })}
+                    {cargosOpts.length === 0 && (
+                      <p style={{ fontSize: 12, color: 'var(--text-faint)' }}>Nenhum cargo com dados</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="eyebrow mb-2" style={{ color: 'var(--text-faint)' }}>Categoria de gasto</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {catsOpts.map(c => {
+                      const on = filtrosCG.categorias.includes(c)
+                      return (
+                        <button key={c} type="button"
+                          onClick={() => setFiltrosCG(f => ({ ...f, categorias: toggleInList(f.categorias, c) }))}
+                          className="px-2.5 py-1.5 rounded-lg font-bold"
+                          style={{
+                            fontSize: 11,
+                            background: on ? 'rgba(251,146,60,0.18)' : 'var(--bg-raised)',
+                            color: on ? '#fdba74' : 'var(--text-secondary)',
+                            border: on ? '1px solid rgba(251,146,60,0.4)' : '1px solid transparent',
+                          }}>
+                          {c}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="eyebrow mb-1.5 block" style={{ color: 'var(--text-faint)' }}>Valor mínimo (R$)</label>
+                    <input type="number" min="0" step="100" placeholder="Ex: 1000"
+                      value={filtrosCG.minValor}
+                      onChange={e => setFiltrosCG(f => ({ ...f, minValor: e.target.value }))}
+                      className="input-dark w-full px-3 py-2 rounded-xl"
+                      style={{ fontSize: 13 }} />
+                  </div>
+                  <div>
+                    <label className="eyebrow mb-1.5 block" style={{ color: 'var(--text-faint)' }}>Valor máximo (R$)</label>
+                    <input type="number" min="0" step="100" placeholder="Ex: 5000"
+                      value={filtrosCG.maxValor}
+                      onChange={e => setFiltrosCG(f => ({ ...f, maxValor: e.target.value }))}
+                      className="input-dark w-full px-3 py-2 rounded-xl"
+                      style={{ fontSize: 13 }} />
+                  </div>
+                  <div>
+                    <label className="eyebrow mb-1.5 block" style={{ color: 'var(--text-faint)' }}>Escopo</label>
+                    <select
+                      value={filtrosCG.escopo}
+                      onChange={e => setFiltrosCG(f => ({ ...f, escopo: e.target.value }))}
+                      className="input-dark w-full px-3 py-2 rounded-xl"
+                      style={{ fontSize: 13 }}
+                    >
+                      <option value="todos">Equipe + outros gastos</option>
+                      <option value="pessoas">Só equipe (por cargo)</option>
+                      <option value="outros">Só freelancers / comitês / combustível / empresas</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl cursor-pointer"
+                      style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
+                      <input type="checkbox" checked={filtrosCG.soComValor}
+                        onChange={e => setFiltrosCG(f => ({ ...f, soComValor: e.target.checked }))}
+                        style={{ accentColor: 'var(--gold)' }} />
+                      <span className="font-semibold" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        Só com valor &gt; 0
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {msg && (
+              <p className="text-center font-semibold" style={{ fontSize: 12, color: '#34d399' }}>{msg}</p>
+            )}
+
+            <div className="rounded-3xl overflow-hidden"
+              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+              <div className="px-5 py-3 flex items-center justify-between"
+                style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <p className="font-bold" style={{ fontSize: 13, color: 'var(--text-primary)' }}>Prévia dos dados</p>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                  {(rel.linhas || []).length} linha{(rel.linhas || []).length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {(rel.linhas || []).length === 0 ? (
+                <div className="px-5 py-12 text-center">
+                  <AlertTriangle size={22} className="mx-auto mb-2" style={{ color: 'var(--text-faint)' }} />
+                  <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
+                    {ativo === 'cargos-gastos'
+                      ? 'Nenhum item com esses filtros. Ajuste cargo, categoria ou faixa de valor.'
+                      : ativo === 'indicacoes'
+                        ? 'Nenhum indicado com esses filtros. Escolha outro indicador ou desmarque “só pendências”.'
+                        : 'Sem dados neste relatório. Cadastre informações no módulo correspondente.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
+                  <table className="w-full" style={{ fontSize: 12, borderCollapse: 'collapse' }}>
+                    <thead className="sticky top-0" style={{ background: 'var(--bg-raised)' }}>
+                      <tr>
+                        {(rel.colunas || []).map(col => (
+                          <th key={col} className="text-left px-4 py-2.5 font-bold whitespace-nowrap"
+                            style={{ color: 'var(--text-tertiary)', borderBottom: '1px solid var(--border-subtle)' }}>
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(rel.linhas || []).slice(0, 200).map((row, i) => (
+                        <tr key={i}
+                          style={{ borderBottom: '1px solid var(--border-subtle)' }}
+                          className="hov-srf">
+                          {row.map((cell, j) => (
+                            <td key={j} className="px-4 py-2.5 align-top"
+                              style={{
+                                color: j === 0 ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                fontWeight: j === 0 ? 600 : 400,
+                                maxWidth: 280,
+                                wordBreak: 'break-word',
+                              }}>
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {(rel.linhas || []).length > 200 && (
+                    <p className="px-4 py-3 text-center" style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+                      Mostrando 200 de {rel.linhas.length} — exporte XLSX para a lista completa em colunas
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
+
+            <p className="text-center" style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+              Em Imprimir / PDF, escolha “Salvar como PDF” no destino da impressora
+            </p>
+          </section>
         </div>
-      </div>
+      </ModuleWrap>
     </div>
   )
 }

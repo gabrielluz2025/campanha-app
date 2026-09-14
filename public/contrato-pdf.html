@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PDF do contrato</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: #e2e8f0; color: #0f172a; }
+    .bar {
+      position: sticky; top: 0; z-index: 2;
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      padding: 12px 16px; background: #0f172a; color: #e2e8f0;
+    }
+    .bar p { margin: 0; flex: 1; font-size: 13px; line-height: 1.4; }
+    .bar button {
+      border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 800; cursor: pointer;
+    }
+    .pri { background: #0d9488; color: #fff; }
+    .gov { background: #1351b4; color: #fff; }
+    .paper {
+      max-width: 820px; margin: 20px auto 40px; background: #fff; color: #111;
+      padding: 48px 52px; min-height: 1100px;
+      font-family: "Times New Roman", Times, serif; font-size: 15px; line-height: 1.55;
+      white-space: pre-wrap; text-align: justify;
+    }
+    .err { padding: 24px; color: #b91c1c; }
+    .bloco-final { page-break-inside: avoid; break-inside: avoid-page; break-inside: avoid; }
+    .assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 36px; text-align: center; white-space: normal; page-break-inside: avoid; break-inside: avoid; }
+    .hint { font-family: Arial, sans-serif; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; color: #444; margin-bottom: 6px; }
+    .caixa { min-height: 112px; border: 1.6px dashed #333; background: #fafafa; margin-bottom: 10px; }
+    .nome { font-weight: 700; font-size: 13px; }
+    .auth {
+      margin-top: 28px; padding-top: 12px; border-top: 1px solid #bbb;
+      font-family: Arial, sans-serif; font-size: 11px; line-height: 1.45;
+      white-space: normal; text-align: left;
+      page-break-inside: avoid; break-inside: avoid;
+    }
+    .auth b { text-transform: uppercase; font-size: 11px; }
+    @media print {
+      .bar { display: none !important; }
+      body { background: #fff; }
+      .paper { margin: 0; box-shadow: none; max-width: none; }
+      .bloco-final, .assinaturas, .auth { page-break-inside: avoid; break-inside: avoid-page; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bar" id="bar">
+    <p>Salve como PDF (passo 1). Depois abra o portal Gov.br, envie este arquivo e assine no quadro da <strong>direita</strong>.</p>
+    <button type="button" class="pri" id="print">Salvar PDF</button>
+    <button type="button" class="gov" id="gov">Abrir Gov.br</button>
+  </div>
+  <div id="erro" class="err" hidden></div>
+  <div class="paper" id="paper" hidden></div>
+  <script>
+    function limpar(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '') }
+    function formatar(s) {
+      var r = limpar(s)
+      if (r.length < 12) return r
+      return r.slice(0,4) + '-' + r.slice(4,8) + '-' + r.slice(8,12)
+    }
+    function esc(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    }
+    var codigo = formatar(new URLSearchParams(location.search).get('c') || '')
+    document.getElementById('print').addEventListener('click', function () { window.print() })
+    document.getElementById('gov').addEventListener('click', function () {
+      window.open('https://assinador.iti.br/', '_blank', 'noopener,noreferrer')
+    })
+    ;(async function () {
+      if (limpar(codigo).length < 8) {
+        document.getElementById('erro').hidden = false
+        document.getElementById('erro').textContent = 'Link inválido.'
+        return
+      }
+      var res = await fetch('/api.php?action=contrato_info&c=' + encodeURIComponent(limpar(codigo)))
+      var d = res.ok ? await res.json() : null
+      if (!d || !d.codigo) {
+        document.getElementById('erro').hidden = false
+        document.getElementById('erro').textContent = 'Contrato não encontrado. Peça o link de novo à campanha.'
+        return
+      }
+      document.title = d.titulo || 'Contrato'
+      var paper = document.getElementById('paper')
+      paper.hidden = false
+      var confira = location.origin + '/verificar.html?c=' + encodeURIComponent(formatar(d.codigo))
+      paper.innerHTML = esc(d.corpo || '') +
+        '<div class="bloco-final">' +
+        '<div class="assinaturas">' +
+          '<div><p class="hint">Assine somente neste quadro — CONTRATANTE</p><div class="caixa"></div><p class="nome">' + esc(d.contratanteNome || 'CONTRATANTE') + '</p></div>' +
+          '<div><p class="hint">Assine somente neste quadro — CONTRATADO</p><div class="caixa"></div><p class="nome">' + esc(d.contratadoNome || 'CONTRATADO(A)') + '</p></div>' +
+        '</div>' +
+        '<div class="auth"><b>Documento autenticado pela campanha</b><br/>Código: ' + esc(formatar(d.codigo)) + '<br/>Confira em ' + esc(confira) + '</div>' +
+        '</div>'
+      setTimeout(function () { window.print() }, 600)
+    })()
+  </script>
+</body>
+</html>

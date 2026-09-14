@@ -1,7 +1,7 @@
 /**
  * scripts/import-tse.cjs
  * 
- * Baixa dados do TSE para SC 2022/2024 e sobe para o Supabase.
+ * Baixa dados do TSE para SC 2022/2024 e envia para API PHP no Hostinger.
  * Usa leitura por linha (streaming) para evitar limite de memória.
  * Execute UMA vez: node scripts/import-tse.cjs
  */
@@ -11,11 +11,22 @@ const fs       = require('fs')
 const path     = require('path')
 const readline     = require('readline')
 const { execSync } = require('child_process')
-const { createClient } = require('@supabase/supabase-js')
 
-const SUPABASE_URL  = process.env.VITE_SUPABASE_URL || 'https://sdawefxseuuzzqbrjkej.supabase.co'
-const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_ROLE || process.env.VITE_SUPABASE_ANON_KEY || ''
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+const envPath = path.join(__dirname, '../.env')
+const env = {}
+if (fs.existsSync(envPath)) {
+  const content = fs.readFileSync(envPath, 'utf8').replace(/^\uFEFF/, '')
+  content.split(/\r?\n/).forEach(line => {
+    const m = line.trim().match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/)
+    if (!m) return
+    let val = m[2].trim()
+    if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1)
+    if (val.startsWith("'") && val.endsWith("'")) val = val.slice(1, -1)
+    env[m[1]] = val
+  })
+}
+
+const IMPORT_URL = env.HOSTINGER_IMPORT_URL || process.env.HOSTINGER_IMPORT_URL || 'https://campanha.space/api/import.php'
 
 const TMP = path.join(__dirname, '../tmp-tse')
 if (!fs.existsSync(TMP)) fs.mkdirSync(TMP, { recursive: true })
@@ -74,7 +85,8 @@ function download(url, destFile, tentativa = 1) {
 }
 
 const CARGOS_OK = ['DEPUTADO FEDERAL','DEPUTADO ESTADUAL','SENADOR','GOVERNADOR','VEREADOR','PREFEITO']
-const LOTE_SIZE = 300
+const LOTE_SIZE = 500
+const FLUSH_DELAY_MS = 100
 
 // Processa CSV com for-await (backpressure nativo, sem crash)
 async function processarCSVStreaming(csvFile, ano) {
@@ -86,24 +98,38 @@ async function processarCSVStreaming(csvFile, ano) {
   const idx = (h, nome) => h.findIndex(c => c.toUpperCase().includes(nome.toUpperCase()))
 
   let header = null
-  let iCargo, iNum, iMun, iZona, iSecao, iVotos
+  let iCargo, iNum, iMun, iZona, iSecao, iVotos, iLocal
   let lote = []
   let totalOk = 0, totalErro = 0, lastErrMsg = ''
 
   const flush = async () => {
     if (lote.length === 0) return
-    const { error } = await supabase
-      .from('tse_votos_sc')
-      .upsert(lote, { onConflict: 'ano,cargo,numero,municipio,zona,secao', ignoreDuplicates: true })
-    if (error) {
-      totalErro += lote.length
-      lastErrMsg = error.message
-      console.log(`\n  [ERRO] ${error.code}: ${error.message.substring(0,120)}`)
-    } else {
+    // Remove duplicatas dentro do lote
+    const map = new Map()
+    for (const row of lote) {
+      const key = `${row.ano}|${row.cargo}|${row.numero}|${row.municipio}|${row.zona}|${row.secao}`
+      map.set(key, row)
+    }
+    const loteUnico = Array.from(map.values())
+    try {
+      const res = await fetch(IMPORT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: loteUnico }),
+      })
+      const txt = await res.text()
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${txt}`)
+      }
       totalOk += lote.length
+    } catch (err) {
+      totalErro += lote.length
+      lastErrMsg = err.message
+      console.log(`\n  [ERRO] ${err.message.substring(0,200)}`)
     }
     lote = []
     process.stdout.write(`\r  OK: ${totalOk} | Erros: ${totalErro}        `)
+    if (FLUSH_DELAY_MS) await new Promise(r => setTimeout(r, FLUSH_DELAY_MS))
   }
 
   for await (const linha of rl) {
@@ -119,7 +145,8 @@ async function processarCSVStreaming(csvFile, ano) {
       iZona  = idx(h, 'NR_ZONA')
       iSecao = idx(h, 'NR_SECAO')
       iVotos = idx(h, 'QT_VOTOS')  >= 0 ? idx(h, 'QT_VOTOS')   : idx(h, 'VOTOS')
-      console.log(`  Colunas: cargo[${iCargo}] num[${iNum}] mun[${iMun}] zona[${iZona}] sec[${iSecao}] votos[${iVotos}]`)
+      iLocal = idx(h, 'DS_LOCAL_VOTACAO') >= 0 ? idx(h, 'DS_LOCAL_VOTACAO') : idx(h, 'LOCAL')
+      console.log(`  Colunas: cargo[${iCargo}] num[${iNum}] mun[${iMun}] zona[${iZona}] sec[${iSecao}] votos[${iVotos}] local[${iLocal}]`)
       continue
     }
 
@@ -129,11 +156,12 @@ async function processarCSVStreaming(csvFile, ano) {
     const zona   = String(col[iZona]  || '').padStart(4,'0')
     const secao  = String(col[iSecao] || '').padStart(4,'0')
     const votos  = parseInt(col[iVotos] || '0')
+    const local  = (col[iLocal] || '').toUpperCase().trim()
 
     if (!CARGOS_OK.some(c => cargo.includes(c))) continue
     if (!numero || isNaN(numero)) continue
 
-    lote.push({ ano, cargo, numero, municipio: mun, zona, secao, votos })
+    lote.push({ ano, cargo, numero, municipio: mun, zona, secao, votos, local })
     if (lote.length >= LOTE_SIZE) await flush()
   }
 
@@ -144,10 +172,8 @@ async function processarCSVStreaming(csvFile, ano) {
 }
 
 async function main() {
-  console.log('=== Importador de dados TSE → Supabase (streaming) ===\n')
-
-  // Não limpa a tabela inteira (muitos registros → timeout).
-  // O upsert com ignoreDuplicates mantém dados existentes e insere apenas os novos.
+  console.log('=== Importador de dados TSE → Hostinger PHP API (streaming) ===\n')
+  console.log('Enviando para:', IMPORT_URL)
   console.log('Iniciando importação incremental...')
 
   for (const fonte of FONTES) {

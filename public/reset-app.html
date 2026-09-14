@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset — Campanha</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0e131c; color: #e2e8f0; display: flex; min-height: 100vh; align-items: center; justify-content: center; margin: 0; padding: 24px; }
+    .box { max-width: 420px; text-align: center; }
+    h1 { font-size: 1.25rem; margin-bottom: 8px; }
+    p { color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Limpando cache do app…</h1>
+    <p id="msg">Aguarde, você será redirecionado.</p>
+  </div>
+  <script>
+    (async function () {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations()
+          await Promise.all(regs.map((r) => r.unregister()))
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys()
+          await Promise.all(keys.map((k) => caches.delete(k)))
+        }
+        if ('indexedDB' in window && indexedDB.databases) {
+          const dbs = await indexedDB.databases()
+          await Promise.all((dbs || []).map((db) => db.name && new Promise((res) => {
+            const req = indexedDB.deleteDatabase(db.name)
+            req.onsuccess = req.onerror = req.onblocked = () => res()
+          })))
+        }
+      } catch (e) {
+        document.getElementById('msg').textContent = 'Parcial: ' + (e.message || e)
+      }
+      setTimeout(function () { location.replace('/') }, 1200)
+    })()
+  </script>
+</body>
+</html>

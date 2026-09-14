@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Campanha" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <title>Instalar no iPhone · Campanha</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100dvh;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: #07090e; color: #f4f0e6;
+      padding: 28px 20px calc(28px + env(safe-area-inset-bottom));
+    }
+    .wrap { max-width: 420px; margin: 0 auto; }
+    img.logo {
+      width: 72px; height: 72px; border-radius: 18px; display: block;
+      margin: 8px auto 16px; background: #0f172a;
+    }
+    h1 { font-size: 22px; letter-spacing: -0.03em; text-align: center; margin: 0 0 8px; }
+    .lead { text-align: center; color: #b8b09a; font-size: 14px; line-height: 1.45; margin: 0 0 22px; }
+    .card {
+      background: #121826; border: 1px solid rgba(255,255,255,.08);
+      border-radius: 18px; padding: 16px 16px 14px; margin-bottom: 14px;
+    }
+    .step { display: flex; gap: 12px; align-items: flex-start; margin: 12px 0; }
+    .n {
+      flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px;
+      background: rgba(212,175,95,.18); color: #f0d48a;
+      font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    }
+    .step p { margin: 0; font-size: 14px; line-height: 1.4; color: #e8e0cc; }
+    .step b { color: #fff; }
+    .warn {
+      background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.28);
+      color: #fde68a; border-radius: 14px; padding: 12px 14px; font-size: 13px; line-height: 1.45; margin-bottom: 14px;
+    }
+    .ok {
+      background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.28);
+      color: #6ee7b7; border-radius: 14px; padding: 14px; text-align: center; font-weight: 700;
+    }
+    a.btn, button.btn {
+      display: block; width: 100%; text-align: center; text-decoration: none;
+      border: 0; cursor: pointer; font-weight: 800; font-size: 15px;
+      padding: 14px 16px; border-radius: 14px; margin-top: 10px;
+    }
+    .gold { background: #d4af5f; color: #1a1408; }
+    .ghost { background: transparent; color: #f0d48a; border: 1px solid rgba(212,175,95,.35) !important; }
+    .hint { font-size: 12px; color: #8a8270; text-align: center; margin: 14px 0 0; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="logo" src="/apple-touch-icon.png" alt="" />
+    <h1>Campanha no iPhone</h1>
+    <p class="lead" id="lead">Coloque o sistema na tela inicial. Abre como app, sem a barra do Safari.</p>
+
+    <div id="inapp" class="warn" hidden>
+      Você está no WhatsApp ou em outro app. Toque em <b>···</b> ou em <b>Compartilhar</b> e escolha <b>Abrir no Safari</b>. Só o Safari consegue instalar.
+    </div>
+
+    <div id="done" class="ok" hidden>Já está instalado neste iPhone.</div>
+
+    <div id="guide" class="card">
+      <div class="step">
+        <div class="n">1</div>
+        <p>No Safari, toque no botão <b>Compartilhar</b> (quadrado com a seta para cima), embaixo da tela.</p>
+      </div>
+      <div class="step">
+        <div class="n">2</div>
+        <p>Role e toque em <b>Adicionar à Tela de Início</b>.</p>
+      </div>
+      <div class="step">
+        <div class="n">3</div>
+        <p>Confirme <b>Adicionar</b>. O ícone <b>Campanha</b> aparece junto dos outros apps.</p>
+      </div>
+    </div>
+
+    <a class="btn gold" id="clip" href="/atalho.php">Instalar com 1 toque</a>
+    <p class="hint">Se o iPhone pedir, vá em Ajustes → Perfil baixado → Instalar. Depois o ícone aparece na tela inicial.</p>
+    <a class="btn ghost" href="/">Abrir o sistema agora</a>
+  </div>
+  <script>
+    (function () {
+      var ua = navigator.userAgent || ''
+      var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      var stand = navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches
+      var inApp = /FBAN|FBAV|Instagram|Line\/|WhatsApp|MicroMessenger|TikTok|Twitter/i.test(ua)
+      if (stand) {
+        document.getElementById('done').hidden = false
+        document.getElementById('guide').hidden = true
+        document.getElementById('clip').style.display = 'none'
+        document.getElementById('lead').textContent = 'Este iPhone já tem o Campanha na tela inicial.'
+      } else if (inApp || (!ios && /Android/i.test(ua))) {
+        if (inApp) document.getElementById('inapp').hidden = false
+      }
+      if (!ios && !stand) {
+        document.getElementById('lead').textContent = 'Abra este link no Safari do iPhone para instalar. No Android, use o arquivo Campanha.apk.'
+      }
+    })()
+  </script>
+</body>
+</html>

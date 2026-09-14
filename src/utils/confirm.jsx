@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AlertTriangle, Trash2 } from 'lucide-react'
 
 // API imperativa de confirmação com diálogo estilizado.
@@ -30,7 +31,7 @@ export function ConfirmHost() {
     if (!state) return
     function onKey(e) {
       if (e.key === 'Escape') { state.resolve(false); setState(null) }
-      else if (e.key === 'Enter') { state.resolve(true); setState(null) }
+      else if (e.key === 'Enter' && !state.opts?.choices?.length) { state.resolve(true); setState(null) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -45,10 +46,20 @@ export function ConfirmHost() {
 
   function done(v) { state.resolve(v); setState(null) }
 
-  return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center px-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
-      onClick={() => done(false)}>
+  // Portal no body: evita .app-shell > * { z-index:1 } esconder o diálogo
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={opts.title || 'Confirmar'}
+      className="fixed inset-0 flex items-center justify-center px-4"
+      style={{
+        zIndex: 10050,
+        background: 'rgba(0,0,0,0.65)',
+        backdropFilter: 'blur(6px)',
+      }}
+      onClick={() => done(false)}
+    >
       <div className="w-full max-w-sm rounded-2xl overflow-hidden anim-fade-up"
         style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', boxShadow: '0 30px 80px rgba(0,0,0,0.6)' }}
         onClick={e => e.stopPropagation()}>
@@ -66,19 +77,39 @@ export function ConfirmHost() {
             {opts.message || 'Esta ação não pode ser desfeita. Deseja continuar?'}
           </p>
         </div>
-        <div className="flex gap-2.5 px-5 pb-5">
-          <button onClick={() => done(false)}
-            className="flex-1 py-2.5 rounded-xl font-bold transition-all"
-            style={{ fontSize: 13, background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-            {opts.cancelLabel || 'Cancelar'}
-          </button>
-          <button onClick={() => done(true)} autoFocus
-            className="flex-1 py-2.5 rounded-xl font-bold text-white transition-all"
-            style={{ fontSize: 13, background: accent, boxShadow: `0 6px 20px ${accent}55` }}>
-            {opts.confirmLabel || 'Excluir'}
-          </button>
+        <div className={`px-5 pb-5 ${opts.choices?.length ? 'flex flex-col gap-2' : 'flex gap-2.5'}`}>
+          {opts.choices?.length ? (
+            <>
+              {opts.choices.map((c, i) => (
+                <button key={c.id} type="button" onClick={() => done(c.id)} autoFocus={i === 0}
+                  className="w-full py-2.5 rounded-xl font-bold text-white transition-all"
+                  style={{ fontSize: 13, background: c.color || accent, boxShadow: `0 6px 20px ${(c.color || accent)}44` }}>
+                  {c.label}
+                </button>
+              ))}
+              <button type="button" onClick={() => done(false)}
+                className="w-full py-2.5 rounded-xl font-bold transition-all"
+                style={{ fontSize: 13, background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+                {opts.cancelLabel || 'Cancelar'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={() => done(false)}
+                className="flex-1 py-2.5 rounded-xl font-bold transition-all"
+                style={{ fontSize: 13, background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+                {opts.cancelLabel || 'Cancelar'}
+              </button>
+              <button type="button" onClick={() => done(true)} autoFocus
+                className="flex-1 py-2.5 rounded-xl font-bold text-white transition-all"
+                style={{ fontSize: 13, background: accent, boxShadow: `0 6px 20px ${accent}55` }}>
+                {opts.confirmLabel || 'Excluir'}
+              </button>
+            </>
+          )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

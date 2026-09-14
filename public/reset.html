@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resetar sessão — Campanha</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 40px; max-width: 480px; text-align: center; }
+  h1 { font-size: 1.4rem; margin-bottom: 8px; color: #f1f5f9; }
+  p { color: #94a3b8; font-size: 0.95rem; margin-bottom: 28px; }
+  button { background: #4f46e5; color: white; border: none; padding: 14px 32px; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 12px; }
+  button:hover { background: #4338ca; }
+  .secondary { background: #0f172a; border: 1px solid #334155; color: #94a3b8; }
+  .secondary:hover { background: #1e293b; }
+  .status { margin-top: 20px; padding: 12px; border-radius: 8px; font-size: 0.875rem; display: none; }
+  .ok { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); color: #86efac; display: block; }
+  .err { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; display: block; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div style="font-size:3rem;margin-bottom:16px">🔄</div>
+  <h1>Resetar e recuperar meus dados</h1>
+  <p>Use este botão para limpar o cache local e voltar para a campanha principal com todos os seus dados.</p>
+
+  <button onclick="resetCompleto()">🚀 Resetar e entrar na campanha principal</button>
+  <button class="secondary" onclick="window.location='/'">← Voltar sem resetar</button>
+
+  <div id="status" class="status"></div>
+</div>
+
+<script>
+function resetCompleto() {
+  const status = document.getElementById('status');
+  status.className = 'status';
+  status.textContent = 'Limpando cache...';
+  status.style.display = 'block';
+
+  try {
+    // 1. Limpar TODO o localStorage
+    localStorage.clear();
+    // 2. Limpar sessionStorage
+    sessionStorage.clear();
+    // 3. Remover Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
+    }
+    // 4. Limpar caches do browser
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => caches.delete(name));
+      });
+    }
+
+    status.textContent = '✅ Cache limpo! Redirecionando...';
+    status.className = 'status ok';
+
+    // 5. Redirecionar para o app com parâmetro de força
+    setTimeout(() => {
+      window.location.href = '/?reset=' + Date.now();
+    }, 1500);
+
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+    status.className = 'status err';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Check, Clock, AlertTriangle, Navigation } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════
    useCountUp — animated number counter (ease-out)
@@ -118,10 +119,23 @@ export function ProgressRing({ pct = 0, size = 96, stroke = 8, from = '#2563eb',
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {children || (
           <span className="font-black text-white tnum" style={{ fontSize: size * 0.24 }}>
-            {Math.round(animated)}<span style={{ fontSize: size * 0.13, opacity: 0.5 }}>%</span>
+            {Math.round(animated)}<span style={{ fontSize: size * 0.13, opacity: 0.7 }}>%</span>
           </span>
         )}
-        {label && <span className="eyebrow" style={{ marginTop: 2 }}>{label}</span>}
+        {label && (
+          <span
+            className="uppercase font-bold text-center leading-tight"
+            style={{
+              marginTop: 2,
+              fontSize: Math.max(8, size * 0.095),
+              letterSpacing: '0.06em',
+              color: 'rgba(255,255,255,0.78)',
+              maxWidth: size * 0.72,
+            }}
+          >
+            {label}
+          </span>
+        )}
       </div>
     </div>
   )
@@ -140,8 +154,8 @@ export function Skeleton({ w = '100%', h = 16, className = '', style }) {
 export function ModuleWrap({ children, className = '', style }) {
   return (
     <div
-      className={`w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 anim-fade ${className}`}
-      style={{ maxWidth: 1400, ...style }}
+      className={`w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-9 anim-fade ${className}`}
+      style={{ maxWidth: 1420, ...style }}
     >
       {children}
     </div>
@@ -149,45 +163,64 @@ export function ModuleWrap({ children, className = '', style }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   PageHeader — consistent module header with icon, title, actions
+   PageHeader — Sala de Comando: quiet title + gold rule
 ═══════════════════════════════════════════════════════════ */
 export function PageHeader({
-  eyebrow, title, subtitle, icon: Icon,
-  iconFrom = '#2563eb', iconTo = '#06b6d4',
-  glow = 'rgba(37,99,235,0.14)', actions, className = '',
+  eyebrow = 'Sala de Comando',
+  title,
+  subtitle,
+  icon: Icon,
+  actions,
+  children,
+  className = '',
+  // legacy props ignored (kept so old call sites don't break)
+  iconFrom, iconTo, glow,
 }) {
+  void iconFrom; void iconTo; void glow
   return (
-    <div className={`relative mb-6 lg:mb-8 anim-fade-up ${className}`}>
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute', top: -40, left: -20, width: 320, height: 160,
-          background: `radial-gradient(60% 80% at 20% 30%, ${glow}, transparent 70%)`,
-          pointerEvents: 'none', filter: 'blur(8px)',
-        }}
-      />
+    <div className={`page-header mb-6 lg:mb-7 anim-fade-up ${className}`}>
+      <div className="page-header-rule" aria-hidden />
       <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-start gap-4 min-w-0">
+        <div className="flex items-start gap-3.5 min-w-0">
           {Icon && (
-            <div
-              className="flex items-center justify-center flex-shrink-0"
-              style={{
-                width: 52, height: 52, borderRadius: 16,
-                background: `linear-gradient(135deg, ${iconFrom}, ${iconTo})`,
-                boxShadow: `0 8px 24px ${iconFrom}55`,
-              }}
-            >
-              <Icon size={24} style={{ color: '#fff' }} />
+            <div className="page-header-icon">
+              <Icon size={22} />
             </div>
           )}
           <div className="min-w-0">
-            {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
-            <h1 className="text-display font-black truncate" style={{ fontSize: 26, color: 'var(--text-primary)', lineHeight: 1.1 }}>{title}</h1>
-            {subtitle && <p className="mt-1.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{subtitle}</p>}
+            {eyebrow && <p className="eyebrow mb-1.5" style={{ color: 'var(--gold)' }}>{eyebrow}</p>}
+            <h1 className="font-extrabold truncate" style={{ fontSize: 22, color: 'var(--text-primary)', lineHeight: 1.2, letterSpacing: '-0.015em' }}>{title}</h1>
+            {subtitle && <p className="mt-1.5 text-sm leading-relaxed" style={{ color: 'var(--text-secondary)', maxWidth: 560 }}>{subtitle}</p>}
           </div>
         </div>
         {actions && <div className="flex items-center gap-2 flex-wrap flex-shrink-0">{actions}</div>}
       </div>
+      {children}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   KpiStrip — compact metrics row (no floating mini-cards)
+═══════════════════════════════════════════════════════════ */
+export function KpiStrip({ items = [], columns, className = '' }) {
+  const cols = columns || Math.min(Math.max(items.length, 1), 5)
+  return (
+    <div
+      className={`kpi-strip anim-fade-up ${className}`}
+      style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+    >
+      {items.map((it, i) => (
+        <div key={i} className="kpi-cell">
+          <p className="kpi-label">{it.label}</p>
+          <p className={`kpi-value${it.gold ? ' is-gold' : ''}`}>
+            {typeof it.value === 'number'
+              ? <AnimatedNumber value={it.value} prefix={it.prefix || ''} suffix={it.suffix || ''} decimals={it.decimals || 0} />
+              : it.value}
+          </p>
+          {it.hint && <p className="text-xs mt-1" style={{ color: 'var(--text-faint)' }}>{it.hint}</p>}
+        </div>
+      ))}
     </div>
   )
 }
@@ -287,5 +320,272 @@ export function Pill({ children, color = '#2563eb', dot = false, glow = false, c
       {dot && <span className={glow ? 'glow-pulse' : ''} style={{ width: 6, height: 6, borderRadius: 999, background: color, color, display: 'block' }} />}
       {children}
     </span>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   v2 Field Utility — StatusPill, RecordCard, SegmentedControl,
+   BottomSheet, FieldHeader, CommandHeader
+═══════════════════════════════════════════════════════════ */
+
+const STATUS_VARIANTS = {
+  visitada: { icon: Check, label: 'Visitada' },
+  pendente: { icon: Clock, label: 'Pendente' },
+  esgotado: { icon: AlertTriangle, label: 'Esgotado' },
+  'em-rota': { icon: Navigation, label: 'Em rota' },
+}
+
+export function StatusPill({
+  variant = 'pendente',
+  label,
+  pulse = false,
+  bordered = true,
+  className = '',
+}) {
+  const cfg = STATUS_VARIANTS[variant] || STATUS_VARIANTS.pendente
+  const Icon = cfg.icon
+  const text = label ?? cfg.label
+  return (
+    <span
+      className={`status-pill status-pill--${variant}${bordered ? ' status-pill--bordered' : ''}${pulse ? ' status-pill--pulse' : ''} ${className}`}
+    >
+      {pulse ? (
+        <span className="status-pill__dot" aria-hidden />
+      ) : (
+        <Icon size={12} className="status-pill__icon" aria-hidden />
+      )}
+      {text}
+    </span>
+  )
+}
+
+export function RecordCard({
+  primary,
+  secondary,
+  meta,
+  status,
+  statusVariant,
+  statusPulse = false,
+  lead,
+  icon: Icon,
+  onClick,
+  actions,
+  children,
+  className = '',
+}) {
+  const interactive = Boolean(onClick)
+  const Comp = interactive ? 'button' : 'div'
+  return (
+    <Comp
+      type={interactive ? 'button' : undefined}
+      onClick={onClick}
+      className={`record-card${interactive ? ' record-card--interactive' : ''} w-full text-left ${className}`}
+    >
+      {(lead || Icon) && (
+        <div className="record-card__lead">
+          {lead || (Icon && <Icon size={18} style={{ color: 'var(--text-secondary)' }} />)}
+        </div>
+      )}
+      <div className="record-card__body">
+        {primary && <div className="record-card__primary">{primary}</div>}
+        {secondary && <div className="record-card__secondary">{secondary}</div>}
+        {meta && <div className="record-card__meta">{meta}</div>}
+        {children}
+      </div>
+      {(status || statusVariant || actions) && (
+        <div className="record-card__trail">
+          {status}
+          {!status && statusVariant && (
+            <StatusPill variant={statusVariant} pulse={statusPulse} bordered={false} />
+          )}
+          {actions}
+        </div>
+      )}
+    </Comp>
+  )
+}
+
+export function SegmentedControl({
+  options = [],
+  value,
+  onChange,
+  fixedBottom = false,
+  className = '',
+  'aria-label': ariaLabel = 'Seções',
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label={ariaLabel}
+      className={`segmented-control${fixedBottom ? ' segmented-control--fixed-bottom' : ''} ${className}`}
+    >
+      {options.map(opt => {
+        const active = value === opt.id
+        const OptIcon = opt.icon
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            className={`segmented-control__btn${active ? ' is-active' : ''}`}
+            onClick={() => onChange?.(opt.id)}
+          >
+            {OptIcon && <OptIcon size={14} />}
+            <span className="truncate">{opt.label}</span>
+            {opt.badge != null && opt.badge > 0 && (
+              <span
+                className="font-bold tnum"
+                style={{
+                  fontSize: 10,
+                  padding: '1px 6px',
+                  borderRadius: 999,
+                  background: active ? 'rgba(0,0,0,0.2)' : 'var(--bg-overlay)',
+                  color: active ? 'inherit' : 'var(--text-tertiary)',
+                }}
+              >
+                {opt.badge}
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+const SNAP_ORDER = ['closed', 'peek', 'half', 'full']
+
+function snapIndex(snap) {
+  const i = SNAP_ORDER.indexOf(snap)
+  return i >= 0 ? i : 1
+}
+
+export function BottomSheet({
+  snap = 'peek',
+  onSnapChange,
+  peekHeight,
+  header,
+  children,
+  className = '',
+  showScrim = true,
+  bodyClassName = '',
+}) {
+  const sheetRef = useRef(null)
+  const dragRef = useRef({ startY: 0, startSnap: 'peek', dragging: false })
+  const [dragOffset, setDragOffset] = useState(0)
+
+  const scrimVisible = showScrim && (snap === 'half' || snap === 'full')
+
+  const finishDrag = useCallback((clientY) => {
+    const { startY, startSnap, dragging } = dragRef.current
+    if (!dragging) return
+    dragRef.current.dragging = false
+    setDragOffset(0)
+    const delta = clientY - startY
+    const idx = snapIndex(startSnap)
+    if (delta > 70) {
+      onSnapChange?.(SNAP_ORDER[Math.max(0, idx - 1)])
+    } else if (delta < -70) {
+      onSnapChange?.(SNAP_ORDER[Math.min(SNAP_ORDER.length - 1, idx + 1)])
+    }
+  }, [onSnapChange])
+
+  useEffect(() => {
+    function onMove(e) {
+      if (!dragRef.current.dragging) return
+      setDragOffset(Math.max(0, e.clientY - dragRef.current.startY))
+    }
+    function onUp(e) {
+      finishDrag(e.clientY)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [finishDrag])
+
+  function onHandleDown(e) {
+    dragRef.current = { startY: e.clientY, startSnap: snap, dragging: true }
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }
+
+  const style = {
+    ...(peekHeight ? { '--sheet-peek-h': `${peekHeight}px` } : {}),
+    ...(dragOffset ? { transform: `translateY(${dragOffset}px)`, transition: 'none' } : {}),
+  }
+
+  return (
+    <>
+      {showScrim && (
+        <div
+          className={`bottom-sheet-scrim${scrimVisible ? ' is-visible' : ''}`}
+          aria-hidden
+          onClick={() => onSnapChange?.('peek')}
+        />
+      )}
+      <div
+        ref={sheetRef}
+        className={`bottom-sheet ${className}`}
+        data-snap={snap}
+        style={style}
+        role="dialog"
+        aria-modal={snap === 'full'}
+      >
+        <div className="bottom-sheet__handle-zone" onPointerDown={onHandleDown}>
+          <div className="bottom-sheet__handle" aria-hidden />
+        </div>
+        {header && <div className="bottom-sheet__header">{header}</div>}
+        <div className={`bottom-sheet__body${bodyClassName ? ` ${bodyClassName}` : ''}`}>{children}</div>
+      </div>
+    </>
+  )
+}
+
+export function FieldHeader({
+  title,
+  subtitle,
+  onBack,
+  backLabel = 'Voltar',
+  action,
+  className = '',
+}) {
+  return (
+    <header className={`field-header ${className}`}>
+      {onBack && (
+        <button type="button" className="field-header__back" onClick={onBack} aria-label={backLabel}>
+          ←
+        </button>
+      )}
+      <div className="field-header__title-wrap">
+        {title && <h1 className="field-header__title">{title}</h1>}
+        {subtitle && <p className="field-header__subtitle">{subtitle}</p>}
+      </div>
+      {action && <div className="field-header__action">{action}</div>}
+    </header>
+  )
+}
+
+export function CommandHeader(props) {
+  const { eyebrow = 'Sala de Comando', className = '', ...rest } = props
+  return (
+    <PageHeader
+      eyebrow={eyebrow}
+      className={`command-header ${className}`.trim()}
+      {...rest}
+    />
+  )
+}
+
+export function FieldButton({ children, icon: Icon, className = '', ...rest }) {
+  return (
+    <button type="button" className={`btn-field ${className}`} {...rest}>
+      {Icon && <Icon size={16} />}
+      {children}
+    </button>
   )
 }

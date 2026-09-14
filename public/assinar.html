@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Assinar contrato</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a; color: #e2e8f0; padding: 20px 14px 40px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; font-size: 22px; color: #fff; }
+    .sub { margin: 0 0 16px; font-size: 13px; color: #94a3b8; line-height: 1.45; }
+    .paper {
+      background: #fff; color: #111; border-radius: 12px; padding: 22px 18px;
+      font-family: "Times New Roman", Times, serif; font-size: 14px; line-height: 1.5;
+      white-space: pre-wrap; text-align: justify; margin-bottom: 16px;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+    .assina { text-align: center; }
+    .hint { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #94a3b8; margin-bottom: 6px; }
+    .caixa {
+      min-height: 120px; border: 1.6px dashed #64748b; border-radius: 10px;
+      background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;
+      position: relative;
+    }
+    .caixa.ativa { border-color: #1351b4; box-shadow: 0 0 0 2px rgba(19,81,180,.28); }
+    .ph { font-size: 11px; color: #64748b; padding: 12px; line-height: 1.4; }
+    canvas { width: 100%; height: 120px; touch-action: none; display: block; cursor: crosshair; }
+    .limpar-quadro {
+      position: absolute; top: 6px; right: 6px; z-index: 2;
+      flex: none; min-width: 0; width: auto; padding: 7px 11px; font-size: 11px;
+      background: #dc2626; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .ghost-danger {
+      background: rgba(220,38,38,.18); color: #fca5a5;
+      box-shadow: inset 0 0 0 1px rgba(220,38,38,.4);
+    }
+    .nome { font-weight: 800; font-size: 13px; margin-top: 8px; }
+    label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; margin: 12px 0 6px; }
+    input {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(148,163,184,.25);
+      background: rgba(255,255,255,.06); color: #fff; font-size: 16px;
+    }
+    .btns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    button {
+      flex: 1; min-width: 140px; padding: 13px; border: 0; border-radius: 12px;
+      font-weight: 800; font-size: 14px; cursor: pointer;
+    }
+    .pri { background: #0d9488; color: #fff; }
+    .gov { background: #1351b4; color: #fff; }
+    .ghost { background: rgba(255,255,255,.08); color: #e2e8f0; }
+    .ok { color: #34d399; font-weight: 800; }
+    .err { color: #f87171; font-size: 13px; margin-top: 10px; }
+    .hidden { display: none !important; }
+    .govbox {
+      background: rgba(19,81,180,.16); border: 1px solid rgba(19,81,180,.45);
+      border-radius: 16px; padding: 16px 16px 14px; margin-bottom: 16px;
+    }
+    .govbox h2 { margin: 0 0 4px; font-size: 16px; color: #fff; }
+    .govbox .lead { margin: 0 0 12px; font-size: 13px; color: #93c5fd; line-height: 1.45; }
+    .govbox ol { margin: 0; padding-left: 0; list-style: none; }
+    .govbox li {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 8px 0; border-top: 1px solid rgba(148,163,184,.12);
+      font-size: 13px; color: #e2e8f0; line-height: 1.45;
+    }
+    .govbox li:first-child { border-top: 0; padding-top: 0; }
+    .n {
+      flex-shrink: 0; width: 22px; height: 22px; border-radius: 999px;
+      background: #1351b4; color: #fff; font-size: 12px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; margin-top: 1px;
+    }
+    .note {
+      background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.3);
+      border-radius: 14px; padding: 12px 14px; font-size: 13px; color: #fcd34d; line-height: 1.45;
+      margin-top: 14px;
+    }
+    .maobox {
+      background: rgba(13,148,136,.12); border: 1px solid rgba(13,148,136,.35);
+      border-radius: 16px; padding: 14px 16px; margin-top: 16px;
+    }
+    .maobox h2 { margin: 0 0 6px; font-size: 15px; color: #fff; }
+    .maobox p { margin: 0 0 8px; font-size: 13px; color: #99f6e4; line-height: 1.45; }
+    .selo { color: #1351b4; font-family: Arial, sans-serif; text-align: center; }
+    .selo b { display: block; font-size: 16px; }
+    .selo span { font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Assinar contrato</h1>
+    <p class="sub" id="sub">Carregando…</p>
+    <div id="erro" class="err hidden"></div>
+    <div id="done" class="hidden">
+      <p class="ok">Contrato assinado. A campanha já vê como assinado no sistema.</p>
+      <p class="sub" style="margin-top:12px">Errou? Peça à campanha para clicar em <strong>Resetar assinatura</strong> neste contrato. Depois recarregue esta página e assine de novo.</p>
+    </div>
+    <div id="form" class="hidden">
+      <div class="paper" id="corpo"></div>
+      <div class="grid">
+        <div class="assina">
+          <p class="hint">Contratante — deputado / campanha</p>
+          <div class="caixa" id="box-dep"></div>
+          <p class="nome" id="nome-dep"></p>
+        </div>
+        <div class="assina">
+          <p class="hint">Seu quadro — assine à direita no Gov.br</p>
+          <div class="caixa ativa" id="box-voce">
+            <p class="ph" id="ph-gov">No portal Gov.br, clique neste quadro da direita (é o seu) para assinar.</p>
+            <canvas id="pad" class="hidden" width="560" height="160"></canvas>
+            <button type="button" class="limpar-quadro hidden" id="limpar-quadro">Limpar</button>
+          </div>
+          <p class="nome" id="nome-pes"></p>
+        </div>
+      </div>
+
+      <div class="govbox">
+        <h2>Assine pelo Gov.br (oficial)</h2>
+        <p class="lead">Siga na ordem. A conta Gov.br precisa ser nível <strong>Prata</strong> ou <strong>Ouro</strong>.</p>
+        <ol>
+          <li><span class="n">1</span><span>Baixe o PDF deste contrato (botão abaixo) e salve no celular.</span></li>
+          <li><span class="n">2</span><span>Abra o portal oficial <strong>assinador.iti.br</strong> e entre com o Gov.br.</span></li>
+          <li><span class="n">3</span><span>Toque em <strong>Escolher arquivo</strong> e envie o PDF que você salvou.</span></li>
+          <li><span class="n">4</span><span>Clique no quadro da <strong>direita</strong> (você) e assine. Não assine no da esquerda.</span></li>
+          <li><span class="n">5</span><span>Baixe o PDF já assinado e guarde.</span></li>
+          <li><span class="n">6</span><span>Volte aqui, digite seu CPF e toque em <strong>Já assinei no Gov.br</strong>.</span></li>
+        </ol>
+        <div class="btns">
+          <button type="button" class="ghost" id="pdf">1. Baixar PDF</button>
+          <button type="button" class="gov" id="abrir-gov">2. Abrir portal Gov.br</button>
+        </div>
+        <label for="cpf">Seu CPF completo (só para confirmar que é você)</label>
+        <input id="cpf" inputmode="numeric" placeholder="000.000.000-00" autocomplete="off" />
+        <div class="btns">
+          <button type="button" class="gov" id="enviar-gov">Já assinei no Gov.br</button>
+        </div>
+      </div>
+
+      <div class="note" id="aviso-mao">
+        Não conseguiu (conta, senha, nível Prata/Ouro ou celular)? Avise a campanha.
+        Eles autorizam neste contrato a <strong>assinatura à mão livre</strong> e esta página libera o quadro para você desenhar.
+      </div>
+
+      <div class="maobox hidden" id="mao">
+        <h2>Assinatura à mão livre (autorizada pela campanha)</h2>
+        <p>Desenhe sua assinatura no quadro da direita. Se errar, toque em <strong>Limpar assinatura</strong> e faça de novo.</p>
+        <div class="btns">
+          <button type="button" class="ghost-danger" id="limpar">Limpar assinatura</button>
+          <button type="button" class="pri" id="enviar">Assinar à mão e enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    function limparCod(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '') }
+    function formatar(s) {
+      var r = limparCod(s)
+      if (r.length < 12) return r
+      return r.slice(0,4) + '-' + r.slice(4,8) + '-' + r.slice(8,12)
+    }
+    async function sha256(str) {
+      var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str))
+      return [...new Uint8Array(buf)].map(function (b) { return b.toString(16).padStart(2, '0') }).join('')
+    }
+    function soDigitos(s) { return String(s || '').replace(/\D/g, '') }
+    function ehGov(v) { return String(v || '').toLowerCase() === 'govbr' }
+
+    var canvas = document.getElementById('pad')
+    var ctx = canvas.getContext('2d')
+    var desenhando = false
+    var teveTraço = false
+    function pos(e) {
+      var r = canvas.getBoundingClientRect()
+      var t = e.touches ? e.touches[0] : e
+      return { x: (t.clientX - r.left) * (canvas.width / r.width), y: (t.clientY - r.top) * (canvas.height / r.height) }
+    }
+    function limparCanvas() {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      teveTraço = false
+    }
+    limparCanvas()
+    ctx.strokeStyle = '#111'
+    ctx.lineWidth = 2.4
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    function start(e) { e.preventDefault(); desenhando = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y) }
+    function move(e) {
+      if (!desenhando) return
+      e.preventDefault()
+      var p = pos(e)
+      ctx.lineTo(p.x, p.y)
+      ctx.stroke()
+      teveTraço = true
+    }
+    function end() { desenhando = false }
+    canvas.addEventListener('mousedown', start)
+    canvas.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', end)
+    canvas.addEventListener('touchstart', start, { passive: false })
+    canvas.addEventListener('touchmove', move, { passive: false })
+    canvas.addEventListener('touchend', end)
+
+    var q = new URLSearchParams(location.search).get('c') || ''
+    var codigo = formatar(q)
+    var registro = null
+
+    function showErr(t) {
+      var el = document.getElementById('erro')
+      el.textContent = t
+      el.classList.remove('hidden')
+    }
+
+    function seloGov() {
+      var d = document.createElement('div')
+      d.className = 'selo'
+      d.innerHTML = '<b>Gov.br</b><span>Assinado digitalmente</span>'
+      return d
+    }
+
+    function liberarMao() {
+      document.getElementById('ph-gov').classList.add('hidden')
+      canvas.classList.remove('hidden')
+      document.getElementById('limpar-quadro').classList.remove('hidden')
+      document.getElementById('aviso-mao').classList.add('hidden')
+      document.getElementById('mao').classList.remove('hidden')
+    }
+
+    async function carregar() {
+      if (limparCod(codigo).length < 8) {
+        document.getElementById('sub').textContent = 'Link inválido.'
+        showErr('Peça o link de assinatura novamente à campanha.')
+        return
+      }
+      try {
+        var res = await fetch('/api.php?action=contrato_info&c=' + encodeURIComponent(limparCod(codigo)))
+        registro = res.ok ? await res.json() : null
+        if (registro && registro.error) registro = null
+      } catch (e) { registro = null }
+      if (!registro || !registro.codigo) {
+        document.getElementById('sub').textContent = 'Contrato não encontrado.'
+        showErr('Este código ainda não foi publicado. Peça à campanha para clicar em Enviar no WhatsApp ou Copiar link de novo.')
+        return
+      }
+      document.getElementById('sub').textContent = (registro.titulo || 'Contrato') + ' · ' + (registro.contratadoNome || '')
+      document.getElementById('corpo').textContent = registro.corpo || '(sem texto)'
+      document.getElementById('nome-dep').textContent = registro.contratanteNome || 'CONTRATANTE'
+      document.getElementById('nome-pes').textContent = registro.contratadoNome || 'CONTRATADO(A)'
+      if (registro.assinaturaDeputado) {
+        if (ehGov(registro.assinaturaDeputado) || registro.metodoAssinaturaDeputado === 'govbr') {
+          document.getElementById('box-dep').appendChild(seloGov())
+        } else {
+          var img = document.createElement('img')
+          img.src = registro.assinaturaDeputado
+          img.style.maxHeight = '110px'
+          img.style.maxWidth = '100%'
+          document.getElementById('box-dep').appendChild(img)
+        }
+      }
+      if (registro.assinadoContratadoEm && registro.assinaturaContratado) {
+        document.getElementById('form').classList.add('hidden')
+        document.getElementById('done').classList.remove('hidden')
+        document.getElementById('sub').textContent = ehGov(registro.assinaturaContratado) || registro.metodoAssinaturaContratado === 'govbr'
+          ? 'Este contrato já foi assinado no Gov.br.'
+          : 'Este contrato já foi assinado à mão livre.'
+        return
+      }
+      document.getElementById('form').classList.remove('hidden')
+      if (registro.permitirAssinaturaMaoLivre) liberarMao()
+    }
+
+    async function validarCpf() {
+      var cpf = soDigitos(document.getElementById('cpf').value)
+      if (cpf.length !== 11) { showErr('Informe o CPF completo com 11 dígitos.'); return null }
+      if (!registro || !registro.cpfHash) {
+        showErr('Este contrato não tem CPF cadastrado. A campanha precisa salvar o contrato de novo.')
+        return null
+      }
+      var h = await sha256('cpf:' + cpf)
+      if (h !== registro.cpfHash) { showErr('CPF não confere com o cadastro deste contrato.'); return null }
+      return cpf
+    }
+
+    async function enviarAssinatura(payload) {
+      document.getElementById('erro').classList.add('hidden')
+      try {
+        var res = await fetch('/api.php?action=contrato_assinar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        var data = await res.json().catch(function () { return {} })
+        if (!res.ok) throw new Error(data.error || 'fail')
+        document.getElementById('form').classList.add('hidden')
+        document.getElementById('done').classList.remove('hidden')
+      } catch (e) {
+        showErr(e.message && e.message !== 'fail' ? e.message : 'Não foi possível enviar. Tente de novo com internet.')
+      }
+    }
+
+    document.getElementById('limpar').addEventListener('click', limparCanvas)
+    document.getElementById('limpar-quadro').addEventListener('click', function (e) {
+      e.preventDefault()
+      e.stopPropagation()
+      limparCanvas()
+    })
+    document.getElementById('enviar').addEventListener('click', async function () {
+      if (!registro || !registro.permitirAssinaturaMaoLivre) {
+        showErr('A campanha ainda não autorizou a assinatura à mão livre.')
+        return
+      }
+      if (!teveTraço) { showErr('Desenhe sua assinatura no quadro da direita.'); return }
+      var cpf = await validarCpf()
+      if (!cpf) return
+      await enviarAssinatura({
+        c: codigo,
+        cpf: cpf,
+        metodo: 'tela',
+        assinaturaContratado: canvas.toDataURL('image/png')
+      })
+    })
+    document.getElementById('pdf').addEventListener('click', function () {
+      window.open('/contrato-pdf.html?c=' + encodeURIComponent(codigo), '_blank', 'noopener,noreferrer')
+    })
+    document.getElementById('abrir-gov').addEventListener('click', function () {
+      window.open('https://assinador.iti.br/', '_blank', 'noopener,noreferrer')
+    })
+    document.getElementById('enviar-gov').addEventListener('click', async function () {
+      var cpf = await validarCpf()
+      if (!cpf) return
+      await enviarAssinatura({ c: codigo, cpf: cpf, metodo: 'govbr' })
+    })
+
+    carregar()
+  </script>
+</body>
+</html>

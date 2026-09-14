@@ -35,6 +35,7 @@ export const COLEGIO_BAIRRO = {
   'ASSOCIAÇÃO EDUCACIONAL E ASSISTENCIAL SHALOM': 'Garcia',
   'ASSOCIAÇÃO FRANCISCANA DE ENSINO SENHOR BOM JESUS': 'Centro',
   'CEDUPHH - CENTRO DE EDUCACAO PROFISSIONAL HERMANN HERING': 'Escola Agrícola',
+  'CEDUPHH - CENTRO DE EDUCAÇÃO PROFISSIONAL HERMANN HERING': 'Escola Agrícola',
   'CENTRO DE EDUCAÇÃO INFANTIL ALBERTO STEIN': 'Velha',
   'CENTRO DE EDUCAÇÃO INFANTIL PEDRO KRAUS': 'Vorstadt',
   'ESCOLA BARÃO DO RIO BRANCO': 'Centro',
@@ -101,7 +102,7 @@ export const ELEITORES_POR_BAIRRO = {
   'Fidélis':           3921,
   'Fortaleza':        13059,
   'Garcia':           15237,
-  'Glória':            6635,
+  'Glória':            6634,
   'Itoupava Central': 28871,
   'Itoupava Norte':   16818,
   'Itoupava Seca':    16117,
@@ -120,4 +121,27 @@ export const ELEITORES_POR_BAIRRO = {
   'Vila Itoupava':     4621,
   'Vila Nova':         5448,
   'Vorstadt':          3918,
+}
+
+/** Bairros sem colégio TRE próprio — estimativa residencial (Censo 2022 × razão eleitor/pop.). */
+export const ELEITORES_RESIDENCIAIS_POR_BAIRRO = {
+  'Bom Retiro':       739,
+  'Boa Vista':       1392,
+  'Fortaleza Alta':  4302,
+  'Jardim Blumenau': 2967,
+  'Ribeirão Fresco': 1273,
+  'Salto':           3771,
+  'Salto Weissbach': 5420,
+  'Victor Konder':   4825,
+  'Vila Formosa':     554,
+}
+
+export function eleitoresDoBairro(bairro) {
+  return ELEITORES_POR_BAIRRO[bairro]
+    || ELEITORES_RESIDENCIAIS_POR_BAIRRO[bairro]
+    || 0
+}
+
+export function eleitoresBairroEhEstimado(bairro) {
+  return !ELEITORES_POR_BAIRRO[bairro] && !!ELEITORES_RESIDENCIAIS_POR_BAIRRO[bairro]
 }

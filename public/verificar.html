@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Conferir contrato</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a; color: #e2e8f0; display: flex; align-items: flex-start; justify-content: center;
+      padding: 32px 16px;
+    }
+    .card {
+      width: 100%; max-width: 480px; background: rgba(15,23,42,.96);
+      border: 1px solid rgba(45,212,191,.35); border-radius: 20px; padding: 24px;
+    }
+    h1 { margin: 0 0 6px; font-size: 20px; color: #fff; }
+    .sub { margin: 0 0 18px; font-size: 13px; color: #94a3b8; line-height: 1.4; }
+    label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 6px; }
+    input {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(148,163,184,.25);
+      background: rgba(255,255,255,.06); color: #fff; font-size: 16px; letter-spacing: .08em;
+    }
+    button {
+      margin-top: 12px; width: 100%; padding: 12px; border: 0; border-radius: 12px;
+      background: #0d9488; color: #fff; font-weight: 800; font-size: 14px; cursor: pointer;
+    }
+    .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(148,163,184,.12); font-size: 13px; }
+    .row span { color: #94a3b8; }
+    .row b { color: #fff; text-align: right; }
+    .ok { color: #34d399; font-weight: 800; }
+    .warn { color: #fbbf24; font-weight: 800; }
+    .err { color: #f87171; margin-top: 12px; font-size: 13px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Conferir contrato</h1>
+    <p class="sub">Digite o código impresso no rodapé do documento (ou leia o QR).</p>
+    <label for="codigo">Código de autenticidade</label>
+    <input id="codigo" maxlength="14" placeholder="XXXX-XXXX-XXXX" autocomplete="off" />
+    <button type="button" id="btn">Conferir</button>
+    <p id="erro" class="err hidden"></p>
+    <div id="ok" class="hidden" style="margin-top:18px">
+      <p class="ok" id="status"></p>
+      <div class="row"><span>Código</span><b id="v-codigo"></b></div>
+      <div class="row"><span>Documento</span><b id="v-titulo"></b></div>
+      <div class="row"><span>Contratante</span><b id="v-campanha"></b></div>
+      <div class="row"><span>Contratado</span><b id="v-pessoa"></b></div>
+      <div class="row"><span>CPF</span><b id="v-cpf"></b></div>
+      <div class="row"><span>Hash do texto</span><b id="v-hash"></b></div>
+      <div class="row"><span>PDF assinado</span><b id="v-arq"></b></div>
+      <div class="row"><span>Como assinou</span><b id="v-metodo"></b></div>
+      <p class="sub" style="margin-top:14px">Se o código bater com o impresso, este é o registro da campanha. Se a pessoa assinou no Gov.br, o selo oficial fica no PDF baixado do portal.</p>
+    </div>
+  </div>
+  <script>
+    function limpar(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '') }
+    function formatar(s) {
+      var r = limpar(s)
+      if (r.length < 12) return r
+      return r.slice(0,4) + '-' + r.slice(4,8) + '-' + r.slice(8,12)
+    }
+    function curto(h) {
+      h = String(h || '')
+      if (h.length < 12) return h.toUpperCase()
+      return (h.slice(0,8) + '…' + h.slice(-4)).toUpperCase()
+    }
+    function rotulo(st) {
+      if (st === 'completo') return 'Assinado pelos dois'
+      if (st === 'contratado') return 'Assinado pelo contratado'
+      if (st === 'deputado') return 'Assinado pelo deputado'
+      return 'Aguardando assinaturas'
+    }
+    async function conferir(codigo) {
+      var erro = document.getElementById('erro')
+      var box = document.getElementById('ok')
+      erro.classList.add('hidden')
+      box.classList.add('hidden')
+      var raw = limpar(codigo)
+      if (raw.length < 8) {
+        erro.textContent = 'Código incompleto.'
+        erro.classList.remove('hidden')
+        return
+      }
+      try {
+        var res = await fetch('/api.php?action=contrato_info&c=' + encodeURIComponent(raw))
+        var data = res.ok ? await res.json() : null
+        if (!data || data === null || data.error || !data.codigo) {
+          erro.textContent = 'Código não encontrado. Confira se digitou igual ao rodapé do contrato.'
+          erro.classList.remove('hidden')
+          return
+        }
+        document.getElementById('status').textContent = rotulo(data.status)
+        document.getElementById('status').className = data.status === 'completo' ? 'ok' : 'warn'
+        document.getElementById('v-codigo').textContent = formatar(data.codigo)
+        document.getElementById('v-titulo').textContent = data.titulo || '—'
+        document.getElementById('v-campanha').textContent = data.contratanteNome || '—'
+        document.getElementById('v-pessoa').textContent = data.contratadoNome || '—'
+        document.getElementById('v-cpf').textContent = data.contratadoCpfMask || '—'
+        document.getElementById('v-hash').textContent = curto(data.hash) || '—'
+        document.getElementById('v-arq').textContent = data.arquivoNome || 'não anexado'
+        var mets = []
+        if (data.metodoAssinaturaContratado === 'govbr' || String(data.assinaturaContratado || '').toLowerCase() === 'govbr') mets.push('contratado no Gov.br')
+        else if (data.metodoAssinaturaContratado === 'tela') mets.push('contratado na tela')
+        if (data.metodoAssinaturaDeputado === 'govbr' || String(data.assinaturaDeputado || '').toLowerCase() === 'govbr') mets.push('deputado no Gov.br')
+        document.getElementById('v-metodo').textContent = mets.length ? mets.join(' · ') : '—'
+        box.classList.remove('hidden')
+      } catch (e) {
+        erro.textContent = 'Não foi possível consultar agora.'
+        erro.classList.remove('hidden')
+      }
+    }
+    var q = new URLSearchParams(location.search).get('c') || ''
+    var input = document.getElementById('codigo')
+    if (q) input.value = formatar(q)
+    document.getElementById('btn').addEventListener('click', function () { conferir(input.value) })
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') conferir(input.value) })
+    if (q) conferir(q)
+  </script>
+</body>
+</html>

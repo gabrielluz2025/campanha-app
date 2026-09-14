@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "space.campanha.app",
+        "sha256_cert_fingerprints": ["C1:D1:0E:CA:39:24:68:83:6B:B1:7D:97:1B:7E:4C:0B:92:4E:2B:4D:CC:48:97:82:F1:35:9F:68:28:48:91:68"]
+      }
+    }]

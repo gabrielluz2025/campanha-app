@@ -1,0 +1,17 @@
+{
+  "packageId": "space.campanha.app",
+  "name": "Campanha",
+  "launcherName": "Campanha",
+  "host": "https://campanha.space",
+  "startUrl": "/",
+  "webManifestUrl": "https://campanha.space/manifest.webmanifest",
+  "iconUrl": "https://campanha.space/pwa-512.png",
+  "maskableIconUrl": "https://campanha.space/pwa-512.png",
+  "themeColor": "#0f172a",
+  "themeColorDark": "#07090e",
+  "backgroundColor": "#0f172a",
+  "navigationColor": "#0f172a",
+  "navigationColorDark": "#07090e",
+  "appVersion": "1.0.0",
+  "appVersionCode": 1
+}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   ClipboardList, Plus, Trash2, BarChart3, Users, MapPin,
-  CheckCircle, Clock, X, Edit3, Send, Eye,
+  CheckCircle, Clock, X, Edit3, Send, Eye, Newspaper,
 } from 'lucide-react'
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -10,6 +10,10 @@ import {
 import { PageHeader, ModuleWrap, Card, Button, EmptyState, selectDark, Pill, StatGrid } from './ui'
 import { BAIRROS_BLUMENAU } from '../utils/constants'
 import { confirmAction } from '../utils/confirm'
+import SaveButton from './SaveButton'
+import { flushAfterSave, writeStorage } from '../utils/persist'
+import ManchetesJornal from './ManchetesJornal'
+import { loadManchetes, MANCHETES_KEY } from '../utils/manchetesJornal'
 
 const CORES = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#2563eb']
 const INPUT_CLS = 'input-dark w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none'
@@ -22,6 +26,7 @@ function gerarId() { return Date.now().toString(36) + Math.random().toString(36)
 export default function Pesquisas() {
   const [enquetes, setEnquetes] = useState(() => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'))
   const [respostas, setRespostas] = useState(() => JSON.parse(localStorage.getItem(RESPOSTAS_KEY) || '{}'))
+  const [manchetes, setManchetes] = useState(() => loadManchetes())
   const [aba, setAba] = useState('lista')
   const [modal, setModal] = useState(null)
   const [respModal, setRespModal] = useState(null)
@@ -30,16 +35,17 @@ export default function Pesquisas() {
   // Form state for new/edit enquete
   const [form, setForm] = useState({ titulo: '', descricao: '', perguntas: [] })
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(enquetes)) }, [enquetes])
-  useEffect(() => { localStorage.setItem(RESPOSTAS_KEY, JSON.stringify(respostas)) }, [respostas])
+  useEffect(() => { writeStorage(STORAGE_KEY, enquetes) }, [enquetes])
+  useEffect(() => { writeStorage(RESPOSTAS_KEY, respostas) }, [respostas])
+  useEffect(() => { writeStorage(MANCHETES_KEY, manchetes) }, [manchetes])
 
   const stats = useMemo(() => {
     const total = enquetes.length
     const ativas = enquetes.filter(e => e.status === 'ativa').length
     const totalResp = Object.values(respostas).reduce((s, arr) => s + arr.length, 0)
     const bairrosCobertura = new Set(Object.values(respostas).flat().map(r => r.bairro)).size
-    return { total, ativas, totalResp, bairrosCobertura }
-  }, [enquetes, respostas])
+    return { total, ativas, totalResp, bairrosCobertura, manchetes: manchetes.length }
+  }, [enquetes, respostas, manchetes])
 
   function novaEnquete() {
     setForm({ titulo: '', descricao: '', perguntas: [{ id: gerarId(), texto: '', tipo: 'multipla', opcoes: ['', ''] }] })
@@ -70,6 +76,7 @@ export default function Pesquisas() {
       setEnquetes(prev => prev.map(e => e.id === modal ? { ...e, titulo: form.titulo.trim(), descricao: form.descricao.trim(), perguntas } : e))
     }
     setModal(null)
+    flushAfterSave()
   }
 
   async function excluirEnquete(id) {
@@ -146,6 +153,7 @@ export default function Pesquisas() {
       [respModal.enqueteId]: [...(prev[respModal.enqueteId] || []), novaResp]
     }))
     setRespModal(null)
+    flushAfterSave()
   }
 
   function updateResposta(idx, valor) {
@@ -162,51 +170,53 @@ export default function Pesquisas() {
   const abas = [
     { id: 'lista', label: 'Enquetes', icon: ClipboardList },
     { id: 'resultados', label: 'Resultados', icon: BarChart3 },
+    { id: 'manchetes', label: 'Manchetes', icon: Newspaper },
   ]
 
   const kpiStats = useMemo(() => [
     { label: 'Total de Enquetes', valor: stats.total, icon: ClipboardList, cor: '#3b82f6' },
     { label: 'Enquetes Ativas', valor: stats.ativas, icon: CheckCircle, cor: '#10b981' },
     { label: 'Total de Respostas', valor: stats.totalResp, icon: Users, cor: '#f59e0b' },
-    { label: 'Bairros Cobertos', valor: stats.bairrosCobertura, icon: MapPin, cor: '#06b6d4' },
+    { label: 'Manchetes', valor: stats.manchetes, icon: Newspaper, cor: '#d4af5f' },
   ], [stats])
 
   return (
     <ModuleWrap className="pb-10 flex-1 overflow-auto">
       <PageHeader
-        eyebrow="Campo"
+        eyebrow="Análise"
         title="Pesquisa de Rua"
-        subtitle="Crie enquetes, colete respostas em campo e analise os resultados"
+        subtitle="Enquetes de campo, resultados e histórico de manchetes com radar eleitoral"
         icon={ClipboardList}
-        iconFrom="#1d4ed8"
-        iconTo="#0891b2"
-        glow="rgba(29,78,216,0.12)"
         actions={
-          <Button onClick={novaEnquete} icon={Plus} style={{ padding: '10px 18px', fontSize: 13 }}>
-            Nova Enquete
-          </Button>
+          <>
+            <SaveButton variant="ghost" />
+            {aba !== 'manchetes' && (
+              <Button onClick={novaEnquete} icon={Plus}>
+                Nova Enquete
+              </Button>
+            )}
+          </>
         }
       />
 
       <StatGrid stats={kpiStats} />
 
-      <div className="flex gap-2 mb-5">
+      <div className="flex flex-wrap gap-2 mb-5">
         {abas.map(a => {
           const Icon = a.icon
           const active = aba === a.id
           return (
             <button key={a.id} onClick={() => setAba(a.id)}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all"
-              style={{
-                background: active ? 'var(--accent)' : 'var(--bg-surface)',
-                color: active ? '#fff' : 'var(--text-secondary)',
-                border: active ? 'none' : '1px solid var(--border-subtle)',
-              }}>
-              <Icon size={16} /> {a.label}
+              className={`tab-chip ${active ? 'active' : ''}`}>
+              <Icon size={14} /> {a.label}
             </button>
           )
         })}
       </div>
+
+        {aba === 'manchetes' && (
+          <ManchetesJornal manchetes={manchetes} setManchetes={setManchetes} />
+        )}
 
         {/* Lista de enquetes */}
         {aba === 'lista' && (
