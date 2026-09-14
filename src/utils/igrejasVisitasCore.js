@@ -165,6 +165,9 @@ function normalizarEntradaHistorico(h) {
     origem: String(h.origem || '').trim() || undefined,
     distanciaMetros: Number.isFinite(Number(h.distanciaMetros)) ? Math.round(Number(h.distanciaMetros)) : undefined,
     justificativaDistancia: String(h.justificativaDistancia || '').trim() || undefined,
+    semFoto: h.semFoto === true,
+    fotoUrl: h.fotoUrl === null ? null : (String(h.fotoUrl || '').trim() || undefined),
+    motivoSemFoto: String(h.motivoSemFoto || '').trim() || undefined,
   }
 }
 

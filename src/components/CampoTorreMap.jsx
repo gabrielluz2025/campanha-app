@@ -213,7 +213,7 @@ export default function CampoTorreMap({
   const [pinEditId, setPinEditId] = useState(null)
   const [pinPending, setPinPending] = useState(null)
   const [pinSaveBusy, setPinSaveBusy] = useState(false)
-  const [mapLayerId, setMapLayerId] = useState('voyager')
+  const [mapLayerId, setMapLayerId] = useState('esri_street')
   const [layerMenuOpen, setLayerMenuOpen] = useState(false)
 
   const basemap = useMemo(() => getCampoMapLayer(mapLayerId), [mapLayerId])

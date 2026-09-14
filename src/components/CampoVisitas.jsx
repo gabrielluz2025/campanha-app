@@ -93,6 +93,8 @@ function CheckInModal({ igreja, onClose, onConfirm, busy }) {
   const [foto, setFoto] = useState('')
   const [fotoErro, setFotoErro] = useState('')
   const [erro, setErro] = useState('')
+  const [semFotoMode, setSemFotoMode] = useState(false)
+  const [motivoSemFoto, setMotivoSemFoto] = useState('')
 
   const distMetros = useMemo(() => {
     if (!gps || !igreja) return null
@@ -132,14 +134,14 @@ function CheckInModal({ igreja, onClose, onConfirm, busy }) {
     }
   }
 
-  async function confirmar() {
+  async function confirmarComFoto() {
     setErro('')
     if (!gps?.lat || !gps?.lng) {
       setErro('GPS obrigatório. Toque em “Atualizar GPS” e permita a localização.')
       return
     }
     if (!isUsableFoto(foto)) {
-      setErro('Foto obrigatória do check-in.')
+      setErro('Selecione uma foto ou use “Confirmar sem foto”.')
       return
     }
     if (precisaJustificativa && !String(justificativa).trim()) {
@@ -152,6 +154,33 @@ function CheckInModal({ igreja, onClose, onConfirm, busy }) {
       foto,
       distanciaMetros: distMetros,
       justificativaDistancia: precisaJustificativa ? justificativa.trim() : '',
+      semFoto: false,
+    })
+  }
+
+  async function confirmarSemFoto() {
+    setErro('')
+    if (!gps?.lat || !gps?.lng) {
+      setErro('GPS obrigatório.')
+      return
+    }
+    const motivo = String(motivoSemFoto || '').trim()
+    if (!motivo) {
+      setErro('Informe o motivo para concluir sem foto.')
+      return
+    }
+    if (precisaJustificativa && !String(justificativa).trim()) {
+      setErro(`Você está a mais de ${RAIO_CHECKIN_CAMPO_M}m da igreja. Informe o motivo de distância.`)
+      return
+    }
+    await onConfirm({
+      obs: [obs, motivo].filter(Boolean).join(' · '),
+      gps,
+      foto: '',
+      distanciaMetros: distMetros,
+      justificativaDistancia: precisaJustificativa ? justificativa.trim() : '',
+      semFoto: true,
+      motivoSemFoto: motivo,
     })
   }
 
@@ -228,18 +257,51 @@ function CheckInModal({ igreja, onClose, onConfirm, busy }) {
           <div>
             <label className="font-semibold flex items-center gap-1.5 mb-2">
               <Camera size={16} className="text-sky-400" />
-              Foto (obrigatória)
+              {semFotoMode ? 'Check-in sem foto' : 'Foto do local'}
             </label>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              disabled={busy}
-              onChange={onFotoChange}
-              className="block w-full text-xs text-[var(--text-muted)] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white"
-            />
-            {fotoErro && <p className="text-amber-300 text-xs mt-1">{fotoErro}</p>}
-            {foto && <img src={foto} alt="Prévia" className="mt-2 rounded-lg max-h-40 w-full object-cover border border-white/10" />}
+            {!semFotoMode && (
+              <>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  disabled={busy}
+                  onChange={onFotoChange}
+                  className="block w-full text-xs text-[var(--text-muted)] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white"
+                />
+                {fotoErro && <p className="text-amber-300 text-xs mt-1">{fotoErro}</p>}
+                {foto && <img src={foto} alt="Prévia" className="mt-2 rounded-lg max-h-40 w-full object-cover border border-white/10" />}
+              </>
+            )}
+            {semFotoMode && (
+              <textarea
+                value={motivoSemFoto}
+                onChange={e => setMotivoSemFoto(e.target.value)}
+                rows={2}
+                disabled={busy}
+                placeholder="Motivo (ex: local fechado, sem iluminação, câmera indisponível)"
+                className="w-full rounded-lg px-3 py-2 text-sm resize-none bg-black/20 border border-amber-500/30"
+              />
+            )}
+            {!semFotoMode ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => { setSemFotoMode(true); setErro('') }}
+                className="mt-2 text-[11px] font-semibold text-amber-300 hover:underline"
+              >
+                ⚠️ Confirmar sem foto
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => { setSemFotoMode(false); setMotivoSemFoto('') }}
+                className="mt-2 text-[11px] font-semibold text-white/60 hover:underline"
+              >
+                Voltar e usar foto
+              </button>
+            )}
           </div>
 
           <div>
@@ -262,28 +324,41 @@ function CheckInModal({ igreja, onClose, onConfirm, busy }) {
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-[var(--border-subtle)] flex gap-2">
-          <button type="button" onClick={onClose} disabled={busy} className="flex-1 py-2.5 rounded-xl text-sm font-bold hover:bg-white/10 disabled:opacity-50">
+        <div className="px-4 py-3 border-t border-[var(--border-subtle)] flex flex-col gap-2">
+          <button type="button" onClick={onClose} disabled={busy} className="w-full py-2.5 rounded-xl text-sm font-bold hover:bg-white/10 disabled:opacity-50">
             Cancelar
           </button>
-          <button
-            type="button"
-            onClick={confirmar}
-            disabled={busy || gpsLoad}
-            className="flex-1 py-2.5 rounded-xl text-sm font-black text-white disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}
-          >
-            {busy ? 'Salvando…' : 'Confirmar visita'}
-          </button>
+          {semFotoMode ? (
+            <button
+              type="button"
+              onClick={confirmarSemFoto}
+              disabled={busy || gpsLoad}
+              className="w-full py-2.5 rounded-xl text-sm font-black text-white disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}
+            >
+              {busy ? 'Salvando…' : 'Concluir sem foto'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={confirmarComFoto}
+              disabled={busy || gpsLoad}
+              className="w-full py-2.5 rounded-xl text-sm font-black text-white disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}
+            >
+              {busy ? 'Salvando…' : '📷 Tirar Foto e Concluir'}
+            </button>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-function ParadaRotaCard({ igreja, parada, onNavigate, onCheckIn, destaque }) {
+function ParadaRotaCard({ igreja, parada, onNavigate, onCheckIn, onACaminho, destaque }) {
   if (!igreja) return null
   const mapsUrl = googleMapsDirUrl(igreja)
+  const pendente = (parada.status || STATUS_PARADA.PENDENTE) === STATUS_PARADA.PENDENTE
   return (
     <li
       className="rounded-xl px-3 py-3 flex flex-col gap-2"
@@ -304,7 +379,18 @@ function ParadaRotaCard({ igreja, parada, onNavigate, onCheckIn, destaque }) {
           <p className="text-xs text-[var(--text-muted)] truncate">{igreja.setor} · {igreja.endereco}</p>
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
+        {pendente && onACaminho && (
+          <button
+            type="button"
+            onClick={() => onACaminho(igreja)}
+            className="w-full py-2 rounded-xl text-xs font-black text-slate-900"
+            style={{ background: 'linear-gradient(135deg, #fde047, #facc15)' }}
+          >
+            🚚 A caminho
+          </button>
+        )}
+        <div className="flex gap-2">
         <a
           href={mapsUrl}
           target="_blank"
@@ -325,6 +411,7 @@ function ParadaRotaCard({ igreja, parada, onNavigate, onCheckIn, destaque }) {
             Check-in
           </button>
         )}
+        </div>
       </div>
     </li>
   )
@@ -347,6 +434,8 @@ export default function CampoVisitas() {
   const [statusFiltro, setStatusFiltro] = useState('todos')
   const [setorFiltro, setSetorFiltro] = useState('todos')
   const [dataRota, setDataRota] = useState(() => dataLocalHoje())
+  const [dataRotaMinhas, setDataRotaMinhas] = useState(() => dataLocalHoje())
+  const [emailRotaMinhas, setEmailRotaMinhas] = useState('')
   const [painelCentralTab, setPainelCentralTab] = useState('despacho')
   const [membroRotaEmail, setMembroRotaEmail] = useState('')
   const [novaIgrejaOpen, setNovaIgrejaOpen] = useState(false)
@@ -357,7 +446,32 @@ export default function CampoVisitas() {
   const prevCheckInsRef = useRef(null)
   const torreDiffInicialRef = useRef(true)
   const hoje = dataLocalHoje()
+  const emailAtivoMinhas = emailRotaMinhas || userEmail
   const showTorreMap = isAdmin && !mobile && aba === 'equipe'
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('view') !== 'minhas') return
+      const membroId = params.get('membroId')
+      if (!membroId) return
+      const dataParam = String(params.get('data') || '').trim() || hoje
+      const membros = readStorage('equipe_membros', [])
+      const m = membros.find(x =>
+        String(x.id) === String(membroId) || normEmail(x.email) === normEmail(membroId),
+      )
+      if (!m?.email) return
+      setEmailRotaMinhas(normEmail(m.email))
+      setDataRotaMinhas(dataParam)
+      setAba('minhas')
+      const url = new URL(window.location.href)
+      url.searchParams.delete('view')
+      url.searchParams.delete('membroId')
+      url.searchParams.delete('data')
+      const qs = url.searchParams.toString()
+      window.history.replaceState({}, '', url.pathname + (qs ? `?${qs}` : '') + url.hash)
+    } catch { /* ignore */ }
+  }, [hoje])
 
   const membrosEquipe = useMemo(() => readStorage('equipe_membros', []), [rotasTick])
 
@@ -381,8 +495,8 @@ export default function CampoVisitas() {
 
   const rotasRaw = useMemo(() => readRotasDiariasRaw(), [rotasTick])
   const minhaRota = useMemo(
-    () => rotaDiariaDoMembro({ data: hoje, membroEmail: userEmail, rotas: rotasRaw }),
-    [hoje, userEmail, rotasRaw],
+    () => rotaDiariaDoMembro({ data: dataRotaMinhas, membroEmail: emailAtivoMinhas, rotas: rotasRaw }),
+    [dataRotaMinhas, emailAtivoMinhas, rotasRaw],
   )
 
   const igById = useMemo(() => new Map(churches.map(ig => [String(ig.id), ig])), [churches])
@@ -415,8 +529,12 @@ export default function CampoVisitas() {
   }, [churches, busca, paradasOrdenadas])
 
   const minhasHoje = useMemo(
-    () => listarCheckInsDoDia({ dataRef: hoje, catalog: churches, somenteEmail: userEmail }),
-    [churches, hoje, userEmail, rotasTick, feedTick],
+    () => listarCheckInsDoDia({
+      dataRef: dataRotaMinhas,
+      catalog: churches,
+      somenteEmail: emailAtivoMinhas,
+    }),
+    [churches, dataRotaMinhas, emailAtivoMinhas, rotasTick, feedTick],
   )
 
   const equipeCheckInsDia = useMemo(
@@ -647,39 +765,53 @@ export default function CampoVisitas() {
   }, [progressoHoje])
 
   function aoNavegar(igreja) {
-    marcarParadaEmTransitoRota({ data: hoje, membroEmail: userEmail, igrejaId: igreja.id })
+    marcarParadaEmTransitoRota({ data: dataRotaMinhas, membroEmail: emailAtivoMinhas, igrejaId: igreja.id })
     setRotasTick(t => t + 1)
   }
 
-  function executarCheckIn({ obs, gps, foto, distanciaMetros, justificativaDistancia }) {
+  function aoACaminho(igreja) {
+    marcarParadaEmTransitoRota({ data: dataRotaMinhas, membroEmail: emailAtivoMinhas, igrejaId: igreja.id })
+    setRotasTick(t => t + 1)
+    setToast('Status: a caminho — torre atualizada.')
+    setTimeout(() => setToast(''), 2500)
+  }
+
+  function executarCheckIn({
+    obs, gps, foto, distanciaMetros, justificativaDistancia, semFoto, motivoSemFoto,
+  }) {
     if (!checkInIgreja) return
     const ig = checkInIgreja
     const entityId = `campo-${ig.id}-${Date.now()}`
     const meta = {
       obs: String(obs || '').trim(),
-      foto,
+      foto: semFoto ? '' : foto,
+      semFoto: !!semFoto,
+      motivoSemFoto: semFoto ? String(motivoSemFoto || '').trim() : '',
+      fotoUrl: semFoto ? null : undefined,
       checkInLat: gps.lat,
       checkInLng: gps.lng,
       origem: 'campo',
-      data: hoje,
+      data: dataRotaMinhas,
       distanciaMetros,
       justificativaDistancia,
     }
 
     markVisited(ig.id, meta).then((reg) => {
-      const entradaId = reg?.historico?.[0]?.id
-      finalizarFotoCheckInCampoBackground({
-        igrejaId: ig.id,
-        entradaId,
-        entityId,
-        fotoDataUrl: foto,
-        onPatched: () => setFeedTick(t => t + 1),
-      })
+      if (!semFoto && isUsableFoto(foto)) {
+        const entradaId = reg?.historico?.[0]?.id
+        finalizarFotoCheckInCampoBackground({
+          igrejaId: ig.id,
+          entradaId,
+          entityId,
+          fotoDataUrl: foto,
+          onPatched: () => setFeedTick(t => t + 1),
+        })
+      }
     }).catch(() => {
       setToast('Não foi possível salvar localmente.')
     })
 
-    marcarParadaConcluidaRota({ data: hoje, membroEmail: userEmail, igrejaId: ig.id })
+    marcarParadaConcluidaRota({ data: dataRotaMinhas, membroEmail: emailAtivoMinhas, igrejaId: ig.id })
     setCheckInIgreja(null)
     setToast('Visita registrada.')
     setRotasTick(t => t + 1)
@@ -872,7 +1004,9 @@ export default function CampoVisitas() {
           {minhaRota ? (
             <>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-bold">Sua rota de hoje</p>
+                <p className="text-sm font-bold">
+                  {dataRotaMinhas === hoje ? 'Sua rota de hoje' : `Rota · ${formatarDataBadgeBR(dataRotaMinhas)}`}
+                </p>
                 <p className="text-xs text-[var(--text-muted)]">
                   {minhaRota.igrejas.filter(p => p.status === STATUS_PARADA.CONCLUIDO).length}/{minhaRota.igrejas.length} concluídas
                 </p>
@@ -885,6 +1019,7 @@ export default function CampoVisitas() {
                     parada={parada}
                     destaque={proximaPendente?.parada.igrejaId === parada.igrejaId}
                     onNavigate={aoNavegar}
+                    onACaminho={aoACaminho}
                     onCheckIn={setCheckInIgreja}
                   />
                 ))}

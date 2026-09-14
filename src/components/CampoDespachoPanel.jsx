@@ -259,11 +259,16 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
       setMsg('Monte a rota antes de enviar.')
       return
     }
+    const membroId = membroAtual?.id != null ? String(membroAtual.id) : ''
+    const linkApp = membroId
+      ? `${window.location.origin}${window.location.pathname}?view=minhas&membroId=${encodeURIComponent(membroId)}&data=${encodeURIComponent(dataAlvo)}`
+      : `${window.location.origin}${window.location.pathname}`
     const mensagem = montarMensagemWhatsAppRota({
       data: dataAlvo,
       membroNome: membroAtual?.nome || membroEmail.split('@')[0],
       paradas,
       igById,
+      linkApp,
     })
     const tel = membroAtual?.whatsapp || membroAtual?.telefone || ''
     const url = urlWhatsAppRota({ telefone: tel, mensagem })

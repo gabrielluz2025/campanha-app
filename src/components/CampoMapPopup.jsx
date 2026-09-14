@@ -75,8 +75,8 @@ export default function CampoMapPopup({
   }, [churchesCatalog, pinLat, pinLng, excluirIds])
 
   return (
-    <div className="campo-map-popup campo-map-popup--glass text-xs min-w-[260px] max-w-[320px]">
-      <div className="campo-map-popup__glass-card space-y-3">
+    <div className="campo-map-popup campo-map-popup--glass text-xs w-full max-w-sm max-h-[80vh] overflow-y-auto rounded-xl p-3">
+      <div className="campo-map-popup__glass-card space-y-3 min-w-0">
         <header className="space-y-2.5">
           <div className="flex flex-wrap items-start gap-2 justify-between">
             <h3 className="font-extrabold text-[16px] text-slate-900 leading-snug flex-1 min-w-0 tracking-tight">

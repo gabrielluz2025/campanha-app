@@ -189,6 +189,8 @@ export function marcarIgrejaVisitada(igrejaId, meta = {}) {
       ? Math.round(Number(meta.distanciaMetros))
       : undefined
     const justificativaDistancia = String(meta.justificativaDistancia || '').trim()
+    const semFoto = meta.semFoto === true
+    const motivoSemFoto = String(meta.motivoSemFoto || '').trim()
     const entrada = {
       id: uidVisita(),
       rotaId: rotaId || undefined,
@@ -200,7 +202,8 @@ export function marcarIgrejaVisitada(igrejaId, meta = {}) {
       visitadoPorEmail: email,
       concluidoEm: meta.concluidoEm || agora.toISOString(),
       obs,
-      foto: String(meta.foto || '').trim(),
+      foto: semFoto ? '' : String(meta.foto || '').trim(),
+      ...(semFoto ? { semFoto: true, fotoUrl: null, motivoSemFoto } : {}),
       ...(Number.isFinite(checkInLat) ? { checkInLat } : {}),
       ...(Number.isFinite(checkInLng) ? { checkInLng } : {}),
       ...(origem ? { origem } : {}),

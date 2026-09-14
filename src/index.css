@@ -3936,8 +3936,10 @@ button.membro-search-row {
   padding: 0;
 }
 .leaflet-popup-content:has(.campo-map-popup--glass) {
-  margin: 10px 12px;
+  margin: 8px 10px;
   width: auto !important;
+  max-height: min(80vh, 520px);
+  overflow-y: auto;
 }
 .leaflet-popup-tip:has(+ .leaflet-popup-content-wrapper .campo-map-popup--glass) {
   display: none;
