@@ -1,10 +1,9 @@
 import { readStorage, writeStorage } from './persist'
-import { ROTAS_DIARIAS_KEY, ROTAS_DIARIAS_REMOVIDOS_KEY } from './rotasDiarias'
 
-/** Chaves que devem ser sempre arrays no módulo campo / rotas. */
+/** Chaves que devem ser sempre arrays no módulo campo / rotas (sem importar rotasDiarias — evita ciclo no boot). */
 export const CAMPO_STORAGE_ARRAY_KEYS = [
-  ROTAS_DIARIAS_KEY,
-  ROTAS_DIARIAS_REMOVIDOS_KEY,
+  'rotas_diarias',
+  'rotas_diarias_removidos',
   'equipe_membros',
   'igrejas_custom',
 ]
@@ -38,7 +37,9 @@ export function sanitizeCampoArrayStorage({ write = true } = {}) {
 /** Erros típicos de dados corrompidos no campo. */
 export function isCampoLengthCrashError(error) {
   const msg = String(error?.message || error || '').toLowerCase()
-  return msg.includes("reading 'length'") || msg.includes('reading "length"')
+  return msg.includes("reading 'length'")
+    || msg.includes('reading "length"')
+    || msg.includes('before initialization')
 }
 
 /** Tenta recuperação leve antes de recarregar a página. */

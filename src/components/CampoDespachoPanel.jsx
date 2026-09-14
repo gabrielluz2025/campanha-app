@@ -24,13 +24,13 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
   const hoje = dataLocalHoje()
   const dataAlvo = dataRota || hoje
   const membros = useMemo(() => loadEquipeMembros(), [])
-  const paradasList = Array.isArray(paradas) ? paradas : []
   const [tick, setTick] = useState(0)
   const [membroLocal, setMembroLocal] = useState('')
   const membroEmail = membroControlled != null ? membroControlled : membroLocal
   const setMembroEmail = onMembroEmailChange || setMembroLocal
   const [rotaId, setRotaId] = useState('')
   const [paradas, setParadas] = useState([])
+  const paradasList = Array.isArray(paradas) ? paradas : []
   const [busca, setBusca] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [msg, setMsg] = useState('')
