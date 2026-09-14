@@ -37,7 +37,8 @@ export function checkInPassaFiltroStatus(item, statusFiltro) {
 /** Recalcula progresso da equipe com paradas filtradas por setor/status. */
 export function filtrarProgressoTorre(progresso = [], { statusFiltro, setorFiltro, igById, checkInsByIgreja }) {
   const map = igById instanceof Map ? igById : new Map()
-  return progresso.map(p => {
+  const list = Array.isArray(progresso) ? progresso : []
+  return list.map(p => {
     const igrejas = (p.igrejas || []).filter(par => {
       const ig = map.get(String(par.igrejaId))
       if (!igrejaPassaFiltroSetor(ig, setorFiltro)) return false
@@ -59,7 +60,8 @@ export function filtrarProgressoTorre(progresso = [], { statusFiltro, setorFiltr
 
 export function filtrarCheckInsTorre(checkIns = [], { statusFiltro, setorFiltro, igById }) {
   const map = igById instanceof Map ? igById : new Map()
-  return checkIns.filter(item => {
+  const list = Array.isArray(checkIns) ? checkIns : []
+  return list.filter(item => {
     const ig = map.get(String(item.igrejaId))
     if (!igrejaPassaFiltroSetor(ig, setorFiltro)) return false
     return checkInPassaFiltroStatus(item, statusFiltro)

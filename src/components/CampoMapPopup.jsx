@@ -207,7 +207,7 @@ export default function CampoMapPopup({
           </div>
         )}
 
-        {!jaNaRota && membros.length > 0 && (
+        {!jaNaRota && (membros || []).length > 0 && (
           <div className="space-y-2 pt-2 border-t border-white/50">
             <label className="block text-[10px] font-black uppercase tracking-wide text-slate-500">
               Despachar para

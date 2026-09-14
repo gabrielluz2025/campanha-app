@@ -61,7 +61,7 @@ export default function CampoEnterpriseCentral({
                   className="rounded-lg px-2 py-1.5 text-xs min-w-[140px] max-w-[200px] bg-black/40 border border-white/10"
                 >
                   <option value="">Trajeto — membro…</option>
-                  {membros.filter(m => m.email).map(m => (
+                  {(membros || []).filter(m => m.email).map(m => (
                     <option key={m.id || m.email} value={m.email}>{m.nome || m.email}</option>
                   ))}
                 </select>

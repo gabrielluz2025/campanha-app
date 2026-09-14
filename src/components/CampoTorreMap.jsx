@@ -217,7 +217,6 @@ export default function CampoTorreMap({
   const [layerMenuOpen, setLayerMenuOpen] = useState(false)
 
   const basemap = useMemo(() => getCampoMapLayer(mapLayerId), [mapLayerId])
-  const layerAtual = CAMPO_MAP_LAYERS[mapLayerId] || CAMPO_MAP_LAYERS.voyager
 
   const onStartPinEdit = useCallback(ig => {
     if (!ig?.id) return
@@ -367,7 +366,7 @@ export default function CampoTorreMap({
               className="campo-map-layer-fab"
               title="Estilo do mapa"
             >
-              <span className="text-base leading-none">{layerAtual.emoji}</span>
+              <span className="text-base leading-none">{basemap.emoji}</span>
               <span className="text-[10px] font-bold uppercase tracking-wide hidden sm:inline">Mapa</span>
             </button>
             {layerMenuOpen && (

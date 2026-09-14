@@ -9,6 +9,7 @@ import { useMobileLayout } from '../hooks/useViewportMode'
 import { compressImageFile } from '../utils/leadFormConfig'
 import { isUsableFoto, finalizarFotoCheckInCampoBackground } from '../utils/mediaUpload'
 import { readStorage } from '../utils/persist'
+import { loadEquipeMembros } from '../utils/rotaUtils'
 import { SYNC_EVENT, SYNC_STORAGE_EVENT } from '../lib/cloudSync'
 import {
   dataLocalHoje,
@@ -456,7 +457,7 @@ export default function CampoVisitas() {
       const membroId = params.get('membroId')
       if (!membroId) return
       const dataParam = String(params.get('data') || '').trim() || hoje
-      const membros = readStorage('equipe_membros', [])
+      const membros = loadEquipeMembros()
       const m = membros.find(x =>
         String(x.id) === String(membroId) || normEmail(x.email) === normEmail(membroId),
       )
@@ -473,7 +474,7 @@ export default function CampoVisitas() {
     } catch { /* ignore */ }
   }, [hoje])
 
-  const membrosEquipe = useMemo(() => readStorage('equipe_membros', []), [rotasTick])
+  const membrosEquipe = useMemo(() => loadEquipeMembros(), [rotasTick])
 
   useEffect(() => {
     if (aba === 'central' || painelCentralTab === 'feed') {
@@ -572,7 +573,7 @@ export default function CampoVisitas() {
     () => progressoRotasEquipe({
       data: hoje,
       rotas: rotasRaw,
-      membros: readStorage('equipe_membros', []),
+      membros: loadEquipeMembros(),
     }),
     [hoje, rotasRaw, rotasTick],
   )
@@ -581,7 +582,7 @@ export default function CampoVisitas() {
     const base = progressoRotasEquipe({
       data: dataFiltro,
       rotas: rotasRaw,
-      membros: readStorage('equipe_membros', []),
+      membros: loadEquipeMembros(),
     })
     return filtrarProgressoTorre(base, { statusFiltro, setorFiltro, igById, checkInsByIgreja })
   }, [dataFiltro, rotasRaw, rotasTick, statusFiltro, setorFiltro, igById, checkInsByIgreja])
@@ -590,6 +591,22 @@ export default function CampoVisitas() {
     () => metricasDesempenhoEquipe({ progresso, checkIns: equipeFeed, raioMetros: RAIO_CHECKIN_CAMPO_M }),
     [progresso, equipeFeed],
   )
+
+  const metricasSafe = useMemo(() => {
+    const m = metricas
+    return {
+      resumo: m?.resumo || { total: 0, concluidas: 0, pct: 0 },
+      agentes: Array.isArray(m?.agentes) ? m.agentes : [],
+      membrosEmTransito: m?.membrosEmTransito ?? 0,
+      membrosParados: m?.membrosParados ?? 0,
+      totalEmTransito: m?.totalEmTransito ?? 0,
+      conformidadePct: m?.conformidadePct ?? null,
+      checkInsComDistancia: m?.checkInsComDistancia ?? 0,
+      checkInsDentroRaio: m?.checkInsDentroRaio ?? 0,
+    }
+  }, [metricas])
+
+  const paradasMinhaRota = minhaRota?.igrejas || []
 
   const foraRaioCountPorEmail = useMemo(() => {
     const m = new Map()
@@ -759,7 +776,7 @@ export default function CampoVisitas() {
 
   const autoMapInit = useRef(false)
   useEffect(() => {
-    if (autoMapInit.current || !progressoHoje.length) return
+    if (autoMapInit.current || !(progressoHoje?.length)) return
     autoMapInit.current = true
     setMapMembroEmail(progressoHoje[0].email)
   }, [progressoHoje])
@@ -833,7 +850,7 @@ export default function CampoVisitas() {
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl p-2.5 border border-emerald-500/25 bg-emerald-500/10">
           <p className="text-[9px] font-bold uppercase text-white/45">Progresso</p>
-          <p className="text-lg font-black text-emerald-300">{metricas.resumo.pct}%</p>
+          <p className="text-lg font-black text-emerald-300">{metricasSafe.resumo.pct}%</p>
         </div>
         <div className="rounded-xl p-2.5 border border-white/10 bg-white/[0.03]">
           <p className="text-[9px] font-bold uppercase text-white/45">Check-ins</p>
@@ -1008,7 +1025,7 @@ export default function CampoVisitas() {
                   {dataRotaMinhas === hoje ? 'Sua rota de hoje' : `Rota · ${formatarDataBadgeBR(dataRotaMinhas)}`}
                 </p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {minhaRota.igrejas.filter(p => p.status === STATUS_PARADA.CONCLUIDO).length}/{minhaRota.igrejas.length} concluídas
+                  {paradasMinhaRota.filter(p => p.status === STATUS_PARADA.CONCLUIDO).length}/{paradasMinhaRota.length} concluídas
                 </p>
               </div>
               <ul className="space-y-2">
@@ -1168,33 +1185,33 @@ export default function CampoVisitas() {
             <div className="rounded-xl p-3 border border-emerald-500/30" style={{ background: 'rgba(16,185,129,0.1)' }}>
               <p className="text-[10px] font-bold uppercase text-white/50">Progresso geral</p>
               <p className="text-xl font-black text-emerald-300 mt-1">
-                {metricas.resumo.pct}%
+                {metricasSafe.resumo.pct}%
               </p>
               <p className="text-xs text-[var(--text-muted)]">
-                {metricas.resumo.concluidas}/{metricas.resumo.total} paradas
+                {metricasSafe.resumo.concluidas}/{metricasSafe.resumo.total} paradas
               </p>
-              {metricas.resumo.total > 0 && (
+              {metricasSafe.resumo.total > 0 && (
                 <div className="mt-2 h-1.5 rounded-full bg-black/30 overflow-hidden">
-                  <div className="h-full bg-emerald-500" style={{ width: `${metricas.resumo.pct}%` }} />
+                  <div className="h-full bg-emerald-500" style={{ width: `${metricasSafe.resumo.pct}%` }} />
                 </div>
               )}
             </div>
             <div className="rounded-xl p-3 border border-amber-500/30" style={{ background: 'rgba(245,158,11,0.08)' }}>
               <p className="text-[10px] font-bold uppercase text-white/50">Ritmo da equipe</p>
               <p className="text-xl font-black text-amber-200 mt-1">
-                {metricas.membrosEmTransito} em trânsito
+                {metricasSafe.membrosEmTransito} em trânsito
               </p>
               <p className="text-xs text-[var(--text-muted)]">
-                {metricas.membrosParados} parado(s) · {metricas.totalEmTransito} parada(s) ativas
+                {metricasSafe.membrosParados} parado(s) · {metricasSafe.totalEmTransito} parada(s) ativas
               </p>
             </div>
             <div className="rounded-xl p-3 border border-sky-500/30" style={{ background: 'rgba(14,165,233,0.08)' }}>
               <p className="text-[10px] font-bold uppercase text-white/50">Conformidade raio</p>
               <p className="text-xl font-black text-sky-200 mt-1">
-                {metricas.conformidadePct != null ? `${metricas.conformidadePct}%` : '—'}
+                {metricasSafe.conformidadePct != null ? `${metricasSafe.conformidadePct}%` : '—'}
               </p>
               <p className="text-xs text-[var(--text-muted)]">
-                {metricas.checkInsDentroRaio}/{metricas.checkInsComDistancia} dentro de {RAIO_CHECKIN_CAMPO_M}m
+                {metricasSafe.checkInsDentroRaio}/{metricasSafe.checkInsComDistancia} dentro de {RAIO_CHECKIN_CAMPO_M}m
               </p>
             </div>
             <div className="rounded-xl p-3 border border-white/10 bg-white/[0.03]">
@@ -1206,7 +1223,7 @@ export default function CampoVisitas() {
             </div>
           </div>
 
-          {metricas.agentes.length > 0 && (
+          {(metricasSafe.agentes.length > 0) && (
             <div className="rounded-xl overflow-hidden border border-white/10">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -1219,7 +1236,7 @@ export default function CampoVisitas() {
                     </tr>
                   </thead>
                   <tbody>
-                    {metricas.agentes.map(a => {
+                    {metricasSafe.agentes.map(a => {
                       const em = String(a.email || '').trim().toLowerCase()
                       const nFora = foraRaioCountPorEmail.get(em) || 0
                       return (
@@ -1261,7 +1278,7 @@ export default function CampoVisitas() {
                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)' }}
               >
                 <option value="">Mapa global (sem trajeto OSRM)…</option>
-                {progresso.map(p => (
+                {(progresso || []).map(p => (
                   <option key={p.email} value={p.email}>{p.nome} ({p.concluidas}/{p.total})</option>
                 ))}
               </select>

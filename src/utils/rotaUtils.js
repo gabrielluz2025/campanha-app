@@ -381,7 +381,8 @@ export function coordsDoBairro(bairrosCoords, bairroNome) {
 
 export function loadEquipeMembros() {
   try {
-    return JSON.parse(localStorage.getItem('equipe_membros') || '[]')
+    const v = JSON.parse(localStorage.getItem('equipe_membros') || '[]')
+    return Array.isArray(v) ? v : []
   } catch {
     return []
   }

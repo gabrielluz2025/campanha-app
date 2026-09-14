@@ -293,12 +293,14 @@ export function metricasDesempenhoEquipe({
   checkIns = [],
   raioMetros = RAIO_CONFORMIDADE_M,
 } = {}) {
-  const resumo = resumoProgressoGeral(progresso)
-  const membrosEmTransito = progresso.filter(p => (p.emTransito || 0) > 0).length
-  const membrosParados = Math.max(0, progresso.length - membrosEmTransito)
-  const totalEmTransito = progresso.reduce((s, p) => s + (p.emTransito || 0), 0)
+  const prog = Array.isArray(progresso) ? progresso : []
+  const checks = Array.isArray(checkIns) ? checkIns : []
+  const resumo = resumoProgressoGeral(prog)
+  const membrosEmTransito = prog.filter(p => (p.emTransito || 0) > 0).length
+  const membrosParados = Math.max(0, prog.length - membrosEmTransito)
+  const totalEmTransito = prog.reduce((s, p) => s + (p.emTransito || 0), 0)
 
-  const comDist = (checkIns || []).filter(c => c.distanciaMetros != null && Number.isFinite(Number(c.distanciaMetros)))
+  const comDist = checks.filter(c => c.distanciaMetros != null && Number.isFinite(Number(c.distanciaMetros)))
   const dentroRaio = comDist.filter(c =>
     Number(c.distanciaMetros) <= raioMetros && !String(c.justificativaDistancia || '').trim(),
   )
@@ -307,7 +309,7 @@ export function metricasDesempenhoEquipe({
     : null
 
   const ultimoPorEmail = new Map()
-  for (const c of checkIns || []) {
+  for (const c of checks) {
     const email = String(c.email || c.visitadoPorEmail || '').trim().toLowerCase()
     if (!email) continue
     const t = Date.parse(c.concluidoEm || '') || 0
@@ -317,7 +319,7 @@ export function metricasDesempenhoEquipe({
     }
   }
 
-  const agentes = progresso.map(p => {
+  const agentes = prog.map(p => {
     const email = normEmail(p.email)
     const ult = ultimoPorEmail.get(email)
     let status = 'Aguardando'

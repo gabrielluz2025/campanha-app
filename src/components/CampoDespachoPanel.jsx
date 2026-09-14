@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2, Save, Loader2, MessageCircle, ChevronUp, ChevronDown, GripVertical, CalendarDays, Zap, MapPin, Search } from 'lucide-react'
-import { readStorage } from '../utils/persist'
+import { loadEquipeMembros } from '../utils/rotaUtils'
 import { buscarIgrejasMaisProximas, dataLocalHoje, dataLocalOffsetDias } from '../utils/campoCheckIn'
 import {
   upsertRotaDiaria,
@@ -23,7 +23,7 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
 ) {
   const hoje = dataLocalHoje()
   const dataAlvo = dataRota || hoje
-  const membros = useMemo(() => readStorage('equipe_membros', []), [])
+  const membros = useMemo(() => loadEquipeMembros(), [])
   const [tick, setTick] = useState(0)
   const [membroLocal, setMembroLocal] = useState('')
   const membroEmail = membroControlled != null ? membroControlled : membroLocal
