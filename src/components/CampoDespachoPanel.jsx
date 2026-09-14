@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { Plus, Trash2, Save, Loader2, MessageCircle, ChevronUp, ChevronDown, GripVertical, CalendarDays } from 'lucide-react'
+import { Plus, Trash2, Save, Loader2, MessageCircle, ChevronUp, ChevronDown, GripVertical, CalendarDays, Zap, MapPin, Search } from 'lucide-react'
 import { readStorage } from '../utils/persist'
-import { dataLocalHoje, dataLocalOffsetDias } from '../utils/campoCheckIn'
+import { buscarIgrejasMaisProximas, dataLocalHoje, dataLocalOffsetDias } from '../utils/campoCheckIn'
 import {
   upsertRotaDiaria,
   rotaDiariaDoMembro,
@@ -10,6 +10,7 @@ import {
   excluirRotaDiaria,
   montarMensagemWhatsAppRota,
   urlWhatsAppRota,
+  otimizarSequenciaParadasOsrm,
 } from '../utils/rotasDiarias'
 
 function normEmail(e) {
@@ -35,6 +36,8 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
   const persistTimer = useRef(null)
   const [draggedIndex, setDraggedIndex] = useState(null)
   const [dragOverIndex, setDragOverIndex] = useState(null)
+  const [modalOtimizar, setModalOtimizar] = useState(false)
+  const [otimizando, setOtimizando] = useState(false)
 
   useEffect(() => {
     const on = () => setTick(t => t + 1)
@@ -103,6 +106,26 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
     const ids = new Set(paradas.map(p => String(p.igrejaId)))
     return arr.filter(ig => !ids.has(String(ig.id))).slice(0, 12)
   }, [churches, busca, paradas])
+
+  const idsNaRota = useMemo(() => new Set(paradas.map(p => String(p.igrejaId))), [paradas])
+
+  const origemProximidade = useMemo(() => {
+    if (!paradas.length) return null
+    const ultima = paradas[paradas.length - 1]
+    const ig = igById.get(String(ultima.igrejaId))
+    const lat = Number(ig?.lat)
+    const lng = Number(ig?.lng)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return { lat, lng, nome: ig?.nome || '' }
+  }, [paradas, igById])
+
+  const igrejasProximasPainel = useMemo(() => {
+    if (!origemProximidade) return []
+    return buscarIgrejasMaisProximas(origemProximidade, churches || [], {
+      limite: 5,
+      excluirIds: [...idsNaRota],
+    })
+  }, [origemProximidade, churches, idsNaRota])
 
   function applyParadas(updater) {
     setParadas(prev => {
@@ -247,9 +270,70 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
+  async function confirmarOtimizacaoRota() {
+    setModalOtimizar(false)
+    setOtimizando(true)
+    setMsg('')
+    try {
+      const { paradas: next, duracao } = await otimizarSequenciaParadasOsrm(paradas, igById)
+      setParadas(next)
+      persistOptimistic(next)
+      const min = duracao != null ? Math.round(duracao / 60) : null
+      setMsg(min != null
+        ? `Sequência otimizada (~${min} min de trajeto OSRM).`
+        : 'Sequência otimizada para rota mais rápida.')
+    } catch (e) {
+      setMsg(e?.message || 'Falha ao otimizar.')
+    } finally {
+      setOtimizando(false)
+    }
+  }
+
   const amanha = dataLocalOffsetDias(1)
 
   return (
+    <>
+      {modalOtimizar && (
+        <div className="fixed inset-0 z-[8000] flex items-center justify-center p-4 bg-black/55 backdrop-blur-sm">
+          <div
+            className="max-w-md w-full rounded-2xl p-5 space-y-4 shadow-2xl border border-white/10"
+            style={{ background: 'linear-gradient(145deg, rgba(30,27,75,0.95), rgba(15,23,42,0.98))' }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="campo-opt-title"
+          >
+            <h2 id="campo-opt-title" className="text-base font-black text-white">
+              Otimizar sequência da rota?
+            </h2>
+            <p className="text-sm text-white/80 leading-relaxed">
+              Deseja reordenar as paradas para o trajeto geograficamente mais rápido?
+            </p>
+            <p className="text-xs text-amber-200/90 bg-amber-500/10 border border-amber-400/30 rounded-xl px-3 py-2">
+              Aviso: isso recalculará a ordem exata para economizar tempo e combustível.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <button
+                type="button"
+                onClick={confirmarOtimizacaoRota}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white"
+                style={{ background: 'linear-gradient(135deg, #eab308, #f59e0b)' }}
+              >
+                <Zap size={16} />
+                Sim, Otimizar para Rota Mais Rápida
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalOtimizar(false)}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white/90 bg-white/10 hover:bg-white/15 border border-white/15"
+              >
+                <MapPin size={16} />
+                Não, Manter Sequência Manual
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     <div className={`space-y-3 ${compact ? '' : 'px-4 py-3 border-b border-[var(--border-subtle)]'}`}
       style={compact ? undefined : { background: 'rgba(99,102,241,0.06)' }}
     >
@@ -308,6 +392,18 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
 
       {membroEmail && (
         <div className="flex flex-wrap gap-2">
+          {paradas.length >= 2 && (
+            <button
+              type="button"
+              disabled={otimizando}
+              onClick={() => setModalOtimizar(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black text-slate-900 disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #fde047, #facc15)' }}
+            >
+              {otimizando ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />}
+              Otimizar Sequência (Mais Rápida)
+            </button>
+          )}
           {paradas.length > 0 && (
             <button
               type="button"
@@ -358,6 +454,30 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
             </ul>
           )}
 
+          {igrejasProximasPainel.length > 0 && (
+            <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-2.5 space-y-2">
+              <p className="text-[10px] font-black uppercase text-indigo-200/90 flex items-center gap-1">
+                <Search size={12} />
+                Próximas{origemProximidade?.nome ? ` de ${origemProximidade.nome}` : ''}
+              </p>
+              <ul className="space-y-1">
+                {igrejasProximasPainel.map(({ igreja: prox, labelDistancia }) => (
+                  <li key={prox.id}>
+                    <button
+                      type="button"
+                      onClick={() => addIgreja(prox)}
+                      className="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-white/10 flex items-center gap-2"
+                    >
+                      <Plus size={13} className="text-emerald-400 shrink-0" />
+                      <span className="truncate flex-1 font-semibold">{prox.nome}</span>
+                      <span className="text-[10px] font-bold text-indigo-300 shrink-0">a {labelDistancia}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <ol className="space-y-1 max-h-[40vh] overflow-y-auto">
             {paradas.map((p, idx) => {
               const ig = igById.get(String(p.igrejaId))
@@ -406,6 +526,7 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
         </>
       )}
     </div>
+    </>
   )
 })
 

@@ -1,7 +1,7 @@
 import { readStorage } from './persist'
 import { readIgrejasVisitas } from './igrejasCatalog'
 import { normalizarRegistroVisita } from './igrejasVisitasCore'
-import { coordValida, distanciaMetrosParada } from './rotaUtils'
+import { coordValida, distanciaMetrosParada, haversineKm } from './rotaUtils'
 
 export const RAIO_CHECKIN_CAMPO_M = 200
 
@@ -160,4 +160,44 @@ export async function syncCampoTorreFromServer() {
   const uid = tenantId || 'local'
   await syncIgrejasVisitasFromServer(uid).catch(() => {})
   await pullAll(uid, { preferServerKeys: ['rotas_diarias'] }).catch(() => {})
+}
+
+/** Texto curto de distância para listas de proximidade. */
+export function formatarDistanciaProxima(metros) {
+  const m = Number(metros)
+  if (!Number.isFinite(m) || m < 0) return '—'
+  if (m < 1000) return `${Math.round(m)}m`
+  return `${(m / 1000).toFixed(1).replace('.', ',')} km`
+}
+
+/**
+ * Igrejas mais próximas de um ponto (Haversine), excluindo ids já na rota.
+ * @returns {{ igreja, distanciaMetros, labelDistancia }[]}
+ */
+export function buscarIgrejasMaisProximas(coordenadaOrigem, catalog = [], opts = {}) {
+  const limite = Math.max(1, Number(opts.limite) || 5)
+  const excluir = new Set((opts.excluirIds || []).map(x => String(x)))
+  const lat = Number(coordenadaOrigem?.lat)
+  const lng = Number(coordenadaOrigem?.lng)
+  if (!coordValida(lat, lng)) return []
+
+  return (catalog || [])
+    .filter(ig => {
+      const id = String(ig?.id ?? '')
+      if (!id || excluir.has(id)) return false
+      return coordValida(Number(ig.lat), Number(ig.lng))
+    })
+    .map(ig => {
+      const distanciaMetros = haversineKm(
+        { lat, lng },
+        { lat: Number(ig.lat), lng: Number(ig.lng) },
+      ) * 1000
+      return {
+        igreja: ig,
+        distanciaMetros,
+        labelDistancia: formatarDistanciaProxima(distanciaMetros),
+      }
+    })
+    .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
+    .slice(0, limite)
 }

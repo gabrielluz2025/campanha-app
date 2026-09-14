@@ -1,4 +1,6 @@
 import { readStorage, writeStorage, flushAfterSave } from './persist'
+import { buscarRotaTripOsrm } from './osrmRoute'
+import { coordValida } from './rotaUtils'
 
 export const ROTAS_DIARIAS_KEY = 'rotas_diarias'
 export const ROTAS_DIARIAS_REMOVIDOS_KEY = 'rotas_diarias_removidos'
@@ -224,6 +226,46 @@ export function atualizarParadasRotaDiaria(rotaId, igrejas) {
   list[idx] = rota
   writeRotasDiarias(list)
   return rota
+}
+
+/**
+ * Reordena paradas via OSRM Trip (menor tempo/distância viária).
+ * Paradas sem GPS válido permanecem ao final, na ordem original.
+ */
+export async function otimizarSequenciaParadasOsrm(paradas = [], igById) {
+  const list = Array.isArray(paradas) ? paradas : []
+  if (list.length < 2) {
+    throw new Error('Adicione pelo menos 2 paradas para otimizar a sequência.')
+  }
+  const getIg = id => (typeof igById?.get === 'function'
+    ? igById.get(String(id))
+    : igById?.[String(id)])
+
+  const comGps = []
+  const semGps = []
+  for (const p of list) {
+    const ig = getIg(p.igrejaId)
+    const lat = Number(ig?.lat)
+    const lng = Number(ig?.lng)
+    if (coordValida(lat, lng)) comGps.push(p)
+    else semGps.push(p)
+  }
+  if (comGps.length < 2) {
+    throw new Error('É necessário GPS válido em pelo menos 2 paradas para otimizar.')
+  }
+
+  const waypoints = comGps.map(p => {
+    const ig = getIg(p.igrejaId)
+    return { lat: Number(ig.lat), lng: Number(ig.lng) }
+  })
+  const trip = await buscarRotaTripOsrm(waypoints)
+  if (!trip?.ordemIndices?.length) {
+    throw new Error('Serviço de rota indisponível. Tente novamente em instantes.')
+  }
+
+  const reordenadas = trip.ordemIndices.map(i => comGps[i]).filter(Boolean)
+  const next = normalizarParadas([...reordenadas, ...semGps])
+  return { paradas: next, distancia: trip.distancia, duracao: trip.duracao }
 }
 
 /** Remove rota do dia e registra id em removidos (sync nuvem). */

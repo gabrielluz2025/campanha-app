@@ -46,6 +46,19 @@ async function fetchOsrmDirectRoute(coordsString) {
   }
 }
 
+async function fetchOsrmDirectTrip(coordsString) {
+  const extra = 'source=any&destination=any&roundtrip=false&overview=full&geometries=geojson'
+  const url =
+    `https://router.project-osrm.org/trip/v1/driving/${coordsString}?${extra}`
+  try {
+    const res = await fetch(url, { headers: { Accept: 'application/json' } })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
 /**
  * @returns {Promise<{ linha: number[][], distancia: number|null, duracao: number|null } | null>}
  */
@@ -79,7 +92,8 @@ export async function buscarRotaTripOsrm(waypoints = []) {
   if (pts.length < 2) return null
   const coordsString = pts.map(p => `${p.lng},${p.lat}`).join(';')
   const extra = '&source=any&destination=any&roundtrip=false&overview=full&geometries=geojson'
-  const data = await fetchOsrmApi('osrm_trip', coordsString, extra)
+  let data = await fetchOsrmApi('osrm_trip', coordsString, extra)
+  if (!data?.trips?.[0]) data = await fetchOsrmDirectTrip(coordsString)
   const trip = data?.trips?.[0]
   if (!trip) return null
 

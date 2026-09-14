@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, Popup, Marker, GeoJSON, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { BLUMENAU } from '../constants/igrejasTheme'
-import { leafletBasemapConfig } from '../config/mapTiles'
+import { CAMPO_MAP_LAYERS, getCampoMapLayer } from '../config/mapTiles'
 import { coordValida } from '../utils/rotaUtils'
 import { STATUS_PARADA } from '../utils/rotasDiarias'
 import { fetchOsrmDrivingGeometry } from '../utils/osrmRoute'
@@ -14,7 +14,6 @@ import { churchToEditForm, persistCoordsGeocodeForm } from '../utils/churchVisit
 import CampoMapPopup from './CampoMapPopup'
 import 'leaflet/dist/leaflet.css'
 
-const BASEMAP = leafletBasemapConfig()
 const MAX_IGREJAS_MAPA = 600
 
 const CORES = {
@@ -214,6 +213,11 @@ export default function CampoTorreMap({
   const [pinEditId, setPinEditId] = useState(null)
   const [pinPending, setPinPending] = useState(null)
   const [pinSaveBusy, setPinSaveBusy] = useState(false)
+  const [mapLayerId, setMapLayerId] = useState('voyager')
+  const [layerMenuOpen, setLayerMenuOpen] = useState(false)
+
+  const basemap = useMemo(() => getCampoMapLayer(mapLayerId), [mapLayerId])
+  const layerAtual = CAMPO_MAP_LAYERS[mapLayerId] || CAMPO_MAP_LAYERS.voyager
 
   const onStartPinEdit = useCallback(ig => {
     if (!ig?.id) return
@@ -266,6 +270,12 @@ export default function CampoTorreMap({
     for (const p of rota?.igrejas || []) s.add(String(p.igrejaId))
     return s
   }, [rota])
+
+  const excluirProxIds = useMemo(() => {
+    const s = new Set(rotaIds)
+    if (pinEditId) s.add(pinEditId)
+    return s
+  }, [rotaIds, pinEditId])
 
   const paradas = useMemo(() => {
     if (!rota?.igrejas?.length) return []
@@ -349,6 +359,37 @@ export default function CampoTorreMap({
             <div className="pointer-events-auto flex flex-wrap gap-2">{floatingSlot}</div>
           </div>
         )}
+        <div className="absolute bottom-3 right-3 z-[500] flex flex-col items-end gap-1 pointer-events-none">
+          <div className="pointer-events-auto relative">
+            <button
+              type="button"
+              onClick={() => setLayerMenuOpen(v => !v)}
+              className="campo-map-layer-fab"
+              title="Estilo do mapa"
+            >
+              <span className="text-base leading-none">{layerAtual.emoji}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wide hidden sm:inline">Mapa</span>
+            </button>
+            {layerMenuOpen && (
+              <div className="campo-map-layer-menu">
+                {Object.values(CAMPO_MAP_LAYERS).map(layer => (
+                  <button
+                    key={layer.id}
+                    type="button"
+                    className={mapLayerId === layer.id ? 'is-active' : ''}
+                    onClick={() => {
+                      setMapLayerId(layer.id)
+                      setLayerMenuOpen(false)
+                    }}
+                  >
+                    <span>{layer.emoji}</span>
+                    <span>{layer.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         <MapContainer
           key={fitKey}
           center={BLUMENAU}
@@ -357,7 +398,13 @@ export default function CampoTorreMap({
           scrollWheelZoom
           preferCanvas
         >
-          <TileLayer attribution={BASEMAP.attribution} url={BASEMAP.url} />
+          <TileLayer
+            key={mapLayerId}
+            attribution={basemap.attribution}
+            url={basemap.url}
+            subdomains={basemap.subdomains || undefined}
+            maxZoom={basemap.maxZoom}
+          />
           <FitRota points={paradasVisiveis.length ? paradasVisiveis : paradas} fitKey={fitKey} allChurches={igrejasGlobais} />
           {statusFiltrado && routePointsFull.length >= 2 && (
             <OsrmRouteLayer points={routePointsFull} muted />
@@ -396,6 +443,9 @@ export default function CampoTorreMap({
                     onMembroDespachoChange={onMembroDespachoChange}
                     onAddToRota={onAddIgrejaRota}
                     onInativar={dispatchEnabled ? onInativarIgreja : undefined}
+                    churchesCatalog={churches}
+                    excluirIgrejaIds={excluirProxIds}
+                    onAddIgrejaProxima={ig => onAddIgrejaRota?.(ig?.id, membroDespacho)}
                     {...pinProps}
                   />
                 </Popup>
@@ -429,8 +479,14 @@ export default function CampoTorreMap({
                     igreja={{ ...p.igreja, lat: pos[0], lng: pos[1] }}
                     parada={p}
                     checkIn={p.checkIn}
-                    membros={[]}
+                    membros={dispatchEnabled ? membros : []}
+                    membroDespacho={membroDespacho}
+                    onMembroDespachoChange={onMembroDespachoChange}
+                    onAddToRota={onAddIgrejaRota}
                     onInativar={dispatchEnabled ? onInativarIgreja : undefined}
+                    churchesCatalog={churches}
+                    excluirIgrejaIds={excluirProxIds}
+                    onAddIgrejaProxima={ig => onAddIgrejaRota?.(ig?.id, membroDespacho)}
                     {...pinProps}
                   />
                 </Popup>
