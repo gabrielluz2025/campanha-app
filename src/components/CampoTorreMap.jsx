@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, Popup, Marker, GeoJSON, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { BLUMENAU } from '../constants/igrejasTheme'
@@ -10,6 +10,7 @@ import {
   igrejaPassaFiltroSetor,
   paradaPassaFiltroStatus,
 } from '../utils/campoTorreFiltros'
+import { churchToEditForm, persistCoordsGeocodeForm } from '../utils/churchVisitMutations'
 import CampoMapPopup from './CampoMapPopup'
 import 'leaflet/dist/leaflet.css'
 
@@ -146,6 +147,52 @@ function OsrmRouteLayer({ points, muted = false }) {
   return null
 }
 
+function CampoIgrejaMarker({
+  igreja,
+  position,
+  icon,
+  zIndexOffset = 100,
+  draggable = false,
+  onDragEnd,
+  children,
+}) {
+  const [pos, setPos] = useState(position)
+  useEffect(() => {
+    setPos(position)
+  }, [position[0], position[1]])
+
+  return (
+    <Marker
+      position={pos}
+      icon={icon}
+      zIndexOffset={zIndexOffset}
+      draggable={draggable}
+      eventHandlers={{
+        dragend: e => {
+          const ll = e.target.getLatLng()
+          const next = [ll.lat, ll.lng]
+          setPos(next)
+          onDragEnd?.(ll.lat, ll.lng)
+        },
+      }}
+    >
+      {children}
+    </Marker>
+  )
+}
+
+function popupPropsForIgreja(ctx, ig) {
+  const id = String(ig.id)
+  return {
+    pinEditActive: ctx.pinEditId === id,
+    pinPending: ctx.pinPending?.igrejaId === id ? ctx.pinPending : null,
+    onStartPinEdit: ctx.onStartPinEdit,
+    onConfirmPinSave: ctx.onConfirmPinSave,
+    onCancelPinEdit: ctx.onCancelPinEdit,
+    pinSaveBusy: ctx.pinSaveBusy,
+  }
+}
+
 export default function CampoTorreMap({
   membroEmail = '',
   rota = null,
@@ -162,7 +209,53 @@ export default function CampoTorreMap({
   onInativarIgreja,
   dispatchEnabled = false,
   floatingSlot = null,
+  allowPinCorrection = true,
 }) {
+  const [pinEditId, setPinEditId] = useState(null)
+  const [pinPending, setPinPending] = useState(null)
+  const [pinSaveBusy, setPinSaveBusy] = useState(false)
+
+  const onStartPinEdit = useCallback(ig => {
+    if (!ig?.id) return
+    setPinEditId(String(ig.id))
+    setPinPending(null)
+  }, [])
+
+  const onCancelPinEdit = useCallback(() => {
+    setPinEditId(null)
+    setPinPending(null)
+  }, [])
+
+  const onConfirmPinSave = useCallback(async (ig, pending) => {
+    if (!ig?.id || !pending?.lat || !pending?.lng) return
+    setPinSaveBusy(true)
+    try {
+      const form = churchToEditForm(ig)
+      persistCoordsGeocodeForm(
+        ig.id,
+        form,
+        { lat: pending.lat, lng: pending.lng, aproximado: false },
+        { gpsManual: true },
+      )
+      setPinEditId(null)
+      setPinPending(null)
+    } finally {
+      setPinSaveBusy(false)
+    }
+  }, [])
+
+  const pinCtx = useMemo(() => ({
+    pinEditId,
+    pinPending,
+    pinSaveBusy,
+    onStartPinEdit: allowPinCorrection ? onStartPinEdit : undefined,
+    onConfirmPinSave: allowPinCorrection ? onConfirmPinSave : undefined,
+    onCancelPinEdit: allowPinCorrection ? onCancelPinEdit : undefined,
+  }), [
+    pinEditId, pinPending, pinSaveBusy, allowPinCorrection,
+    onStartPinEdit, onConfirmPinSave, onCancelPinEdit,
+  ])
+
   const igById = useMemo(
     () => new Map((churches || []).map(ig => [String(ig.id), ig])),
     [churches],
@@ -276,25 +369,37 @@ export default function CampoTorreMap({
 
           {foraRota.map(ig => {
             const opaco = !igrejaPassaFiltroSetor(ig, setorFiltro)
+            const id = String(ig.id)
+            const lat = Number(ig.lat)
+            const lng = Number(ig.lng)
+            const pending = pinPending?.igrejaId === id ? pinPending : null
+            const pos = pending
+              ? [pending.lat, pending.lng]
+              : [lat, lng]
+            const pinProps = popupPropsForIgreja(pinCtx, ig)
             return (
-              <Marker
+              <CampoIgrejaMarker
                 key={`off-${ig.id}`}
-                position={[Number(ig.lat), Number(ig.lng)]}
+                igreja={ig}
+                position={pos}
                 icon={globalPinIcon(opaco)}
-                zIndexOffset={100}
+                zIndexOffset={pinEditId === id ? 800 : 100}
+                draggable={pinEditId === id}
+                onDragEnd={(la, ln) => setPinPending({ igrejaId: id, lat: la, lng: ln })}
               >
-                <Popup maxWidth={280} minWidth={220}>
+                <Popup maxWidth={320} minWidth={260}>
                   <CampoMapPopup
-                    igreja={ig}
-                    checkIn={checkInsByIgreja[String(ig.id)]}
+                    igreja={{ ...ig, lat: pos[0], lng: pos[1] }}
+                    checkIn={checkInsByIgreja[id]}
                     membros={dispatchEnabled ? membros : []}
                     membroDespacho={membroDespacho}
                     onMembroDespachoChange={onMembroDespachoChange}
                     onAddToRota={onAddIgrejaRota}
                     onInativar={dispatchEnabled ? onInativarIgreja : undefined}
+                    {...pinProps}
                   />
                 </Popup>
-              </Marker>
+              </CampoIgrejaMarker>
             )
           })}
 
@@ -303,23 +408,33 @@ export default function CampoTorreMap({
             if (!paradaPassaFiltroStatus(p, statusFiltro, checkInsByIgreja)) return null
             const st = p.status || STATUS_PARADA.PENDENTE
             const label = st === STATUS_PARADA.CONCLUIDO ? '' : String(p.ordem || '')
+            const id = String(p.igrejaId)
+            const pending = pinPending?.igrejaId === id ? pinPending : null
+            const pos = pending
+              ? [pending.lat, pending.lng]
+              : [p.lat, p.lng]
+            const pinProps = popupPropsForIgreja(pinCtx, p.igreja)
             return (
-              <Marker
+              <CampoIgrejaMarker
                 key={p.igrejaId}
-                position={[p.lat, p.lng]}
+                igreja={p.igreja}
+                position={pos}
                 icon={routePinIcon(st, label)}
-                zIndexOffset={st === STATUS_PARADA.EM_TRANSITO ? 600 : 500}
+                zIndexOffset={pinEditId === id ? 900 : (st === STATUS_PARADA.EM_TRANSITO ? 600 : 500)}
+                draggable={pinEditId === id}
+                onDragEnd={(la, ln) => setPinPending({ igrejaId: id, lat: la, lng: ln })}
               >
-                <Popup maxWidth={280} minWidth={220}>
+                <Popup maxWidth={320} minWidth={260}>
                   <CampoMapPopup
-                    igreja={p.igreja}
+                    igreja={{ ...p.igreja, lat: pos[0], lng: pos[1] }}
                     parada={p}
                     checkIn={p.checkIn}
                     membros={[]}
                     onInativar={dispatchEnabled ? onInativarIgreja : undefined}
+                    {...pinProps}
                   />
                 </Popup>
-              </Marker>
+              </CampoIgrejaMarker>
             )
           })}
         </MapContainer>

@@ -3795,3 +3795,79 @@ button.membro-search-row {
 .campo-map-popup button {
   font-family: inherit;
 }
+
+.campo-map-popup--v351 .campo-map-popup__card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2px 0;
+  color: #0f172a;
+}
+.leaflet-popup-content-wrapper:has(.campo-map-popup--v351) {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+.leaflet-popup-tip:has(+ .leaflet-popup-content-wrapper .campo-map-popup--v351),
+.leaflet-popup-content-wrapper:has(.campo-map-popup--v351) + .leaflet-popup-tip {
+  background: #fff;
+}
+.campo-map-popup__badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+.campo-map-popup__btn-street {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+}
+.campo-map-popup__btn-street:hover {
+  filter: brightness(1.05);
+}
+.campo-map-popup__btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  cursor: pointer;
+}
+.campo-map-popup__btn-primary {
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+}
+.campo-map-popup__select:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: 1px;
+}
+.campo-pin-global-wrap.leaflet-marker-draggable,
+.campo-pin-route-wrap.leaflet-marker-draggable {
+  cursor: grab;
+}
+.campo-pin-global-wrap.leaflet-marker-draggable:active,
+.campo-pin-route-wrap.leaflet-marker-draggable:active {
+  cursor: grabbing;
+}
