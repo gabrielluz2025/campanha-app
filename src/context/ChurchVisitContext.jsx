@@ -272,7 +272,8 @@ export function ChurchVisitProvider({ children, userEmail = '', active = true, h
   }, [patchChurch])
 
   const geocodeAllMissing = useCallback(async (opts = {}) => {
-    const list = churches.length ? churches : await reloadIgrejasHidratadasAsync().catch(() => [])
+    const base = Array.isArray(churches) ? churches : []
+    const list = base.length ? base : await reloadIgrejasHidratadasAsync().catch(() => [])
     const result = await geocodificarIgrejasSemPin(list, opts)
     await refresh()
     return result
@@ -345,18 +346,24 @@ export function ChurchVisitProvider({ children, userEmail = '', active = true, h
   }, [patchChurch, refresh])
 
   const stats = useMemo(() => {
-    const total = churches.length
-    const visitadas = churches.filter(c => c.visitado).length
+    const list = Array.isArray(churches) ? churches : []
+    const total = list.length
+    const visitadas = list.filter(c => c.visitado).length
     return { total, visitadas, pendentes: Math.max(0, total - visitadas) }
   }, [churches])
 
+  const churchesList = useMemo(
+    () => (Array.isArray(churches) ? churches : []),
+    [churches],
+  )
+
   const selected = useMemo(
-    () => churches.find(c => String(c.id) === String(selectedId)) || null,
-    [churches, selectedId],
+    () => churchesList.find(c => String(c.id) === String(selectedId)) || null,
+    [churchesList, selectedId],
   )
 
   const value = useMemo(() => ({
-    churches,
+    churches: churchesList,
     loading,
     loadError,
     selected,
@@ -386,7 +393,7 @@ export function ChurchVisitProvider({ children, userEmail = '', active = true, h
     userEmail,
     userName,
   }), [
-    churches, loading, loadError, selected, selectedId,
+    churchesList, loading, loadError, selected, selectedId,
     refresh, markVisited, unmarkVisited,
     saveChurch, addChurch, geocodeChurch, geocodeAllMissing, setNota, setPrioridade,
     removeChurch, clearVisits, clearChurches, purgeOutsideCities, foraCidadesCount,

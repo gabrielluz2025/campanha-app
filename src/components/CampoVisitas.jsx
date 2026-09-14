@@ -8,7 +8,7 @@ import { useAccess } from '../context/AccessContext'
 import { useMobileLayout } from '../hooks/useViewportMode'
 import { compressImageFile } from '../utils/leadFormConfig'
 import { isUsableFoto, finalizarFotoCheckInCampoBackground } from '../utils/mediaUpload'
-import { readStorage } from '../utils/persist'
+import { asArray } from '../utils/persist'
 import { loadEquipeMembros } from '../utils/rotaUtils'
 import { SYNC_EVENT, SYNC_STORAGE_EVENT } from '../lib/cloudSync'
 import {
@@ -487,10 +487,12 @@ export default function CampoVisitas() {
     window.addEventListener(ROTAS_DIARIAS_EVENT, bump)
     window.addEventListener(SYNC_EVENT, bump)
     window.addEventListener(SYNC_STORAGE_EVENT, bump)
+    window.addEventListener('campanha-storage-recovered', bump)
     return () => {
       window.removeEventListener(ROTAS_DIARIAS_EVENT, bump)
       window.removeEventListener(SYNC_EVENT, bump)
       window.removeEventListener(SYNC_STORAGE_EVENT, bump)
+      window.removeEventListener('campanha-storage-recovered', bump)
     }
   }, [])
 
@@ -606,7 +608,14 @@ export default function CampoVisitas() {
     }
   }, [metricas])
 
-  const paradasMinhaRota = minhaRota?.igrejas || []
+  const equipeFeedList = useMemo(() => asArray(equipeFeed), [equipeFeed])
+  const minhasHojeList = useMemo(() => asArray(minhasHoje), [minhasHoje])
+  const equipeCheckInsDiaList = useMemo(() => asArray(equipeCheckInsDia), [equipeCheckInsDia])
+  const alertasTorreList = useMemo(() => asArray(alertasTorre), [alertasTorre])
+  const progressoList = useMemo(() => asArray(progresso), [progresso])
+  const progressoHojeList = useMemo(() => asArray(progressoHoje), [progressoHoje])
+
+  const paradasMinhaRota = asArray(minhaRota?.igrejas)
 
   const foraRaioCountPorEmail = useMemo(() => {
     const m = new Map()
@@ -776,10 +785,10 @@ export default function CampoVisitas() {
 
   const autoMapInit = useRef(false)
   useEffect(() => {
-    if (autoMapInit.current || !(progressoHoje?.length)) return
+    if (autoMapInit.current || !progressoHojeList.length) return
     autoMapInit.current = true
-    setMapMembroEmail(progressoHoje[0].email)
-  }, [progressoHoje])
+    setMapMembroEmail(progressoHojeList[0].email)
+  }, [progressoHojeList])
 
   function aoNavegar(igreja) {
     marcarParadaEmTransitoRota({ data: dataRotaMinhas, membroEmail: emailAtivoMinhas, igrejaId: igreja.id })
@@ -854,7 +863,7 @@ export default function CampoVisitas() {
         </div>
         <div className="rounded-xl p-2.5 border border-white/10 bg-white/[0.03]">
           <p className="text-[9px] font-bold uppercase text-white/45">Check-ins</p>
-          <p className="text-lg font-black">{equipeFeed.length}</p>
+          <p className="text-lg font-black">{equipeFeedList.length}</p>
         </div>
       </div>
       <div
@@ -880,7 +889,7 @@ export default function CampoVisitas() {
         />
       </div>
       <ul className="space-y-2 max-h-[50vh] overflow-y-auto">
-        {equipeFeed.map(item => {
+        {equipeFeedList.map(item => {
           const alertaRaio = checkInAlertaForaRaio(item)
           return (
             <li
@@ -896,7 +905,7 @@ export default function CampoVisitas() {
             </li>
           )
         })}
-        {!equipeFeed.length && (
+        {!equipeFeedList.length && (
           <li className="text-center text-white/40 py-6 text-xs">Nenhum check-in nesta data.</li>
         )}
       </ul>
@@ -949,7 +958,7 @@ export default function CampoVisitas() {
         </div>
       )}
 
-      {loading && churches.length === 0 && (
+      {loading && (churches || []).length === 0 && (
         <div className="flex-shrink-0 mx-4 mt-2 px-3 py-2 rounded-lg text-xs text-[var(--text-muted)] flex items-center gap-2 bg-white/5">
           <Loader2 className="animate-spin" size={14} />
           Atualizando cadastro em segundo plano…
@@ -994,11 +1003,11 @@ export default function CampoVisitas() {
                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)' }}
               >
                 <option value="">Membro no mapa…</option>
-                {progressoHoje.map(p => (
+                {progressoHojeList.map(p => (
                   <option key={p.email} value={p.email}>{p.nome}</option>
                 ))}
                 {rotasDiariasNaData(hoje, rotasRaw).filter(r =>
-                  !progressoHoje.some(p => p.email === r.membroEmail?.toLowerCase?.() || p.email === String(r.membroEmail || '').toLowerCase()),
+                  !progressoHojeList.some(p => p.email === r.membroEmail?.toLowerCase?.() || p.email === String(r.membroEmail || '').toLowerCase()),
                 ).map(r => (
                   <option key={r.id} value={r.membroEmail}>{r.membroNome || r.membroEmail}</option>
                 ))}
@@ -1048,11 +1057,11 @@ export default function CampoVisitas() {
             </p>
           )}
 
-          {minhasHoje.length > 0 && (
+          {minhasHojeList.length > 0 && (
             <div>
               <p className="text-xs font-bold text-[var(--text-muted)] uppercase mb-2">Check-ins de hoje</p>
               <ul className="space-y-2">
-                {minhasHoje.map(item => (
+                {minhasHojeList.map(item => (
                   <li key={`${item.igrejaId}-${item.id}`} className="rounded-xl px-3 py-2 text-xs border border-white/10">
                     <span className="font-semibold">{item.igrejaNome}</span>
                     <span className="text-[var(--text-muted)]"> · {item.hora}</span>
@@ -1069,9 +1078,9 @@ export default function CampoVisitas() {
         </div>
       )}
 
-      {(aba === 'equipe' || aba === 'central') && alertasTorre.length > 0 && (
+      {(aba === 'equipe' || aba === 'central') && alertasTorreList.length > 0 && (
         <div className="fixed top-3 right-3 z-[70] flex flex-col gap-2 max-w-[min(100vw-1.5rem,22rem)] pointer-events-none">
-          {alertasTorre.map(a => (
+          {alertasTorreList.map(a => (
             <div
               key={a.id}
               className="pointer-events-auto rounded-xl border border-amber-500/55 shadow-lg p-3 text-xs"
@@ -1216,9 +1225,9 @@ export default function CampoVisitas() {
             </div>
             <div className="rounded-xl p-3 border border-white/10 bg-white/[0.03]">
               <p className="text-[10px] font-bold uppercase text-white/50">Check-ins (filtro)</p>
-              <p className="text-xl font-black mt-1">{equipeFeed.length}</p>
+              <p className="text-xl font-black mt-1">{equipeFeedList.length}</p>
               <p className="text-xs text-[var(--text-muted)]">
-                {equipeCheckInsDia.length} no dia · feed abaixo
+                {equipeCheckInsDiaList.length} no dia · feed abaixo
               </p>
             </div>
           </div>
@@ -1278,7 +1287,7 @@ export default function CampoVisitas() {
                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)' }}
               >
                 <option value="">Mapa global (sem trajeto OSRM)…</option>
-                {(progresso || []).map(p => (
+                {(progressoList || []).map(p => (
                   <option key={p.email} value={p.email}>{p.nome} ({p.concluidas}/{p.total})</option>
                 ))}
               </select>
@@ -1300,7 +1309,7 @@ export default function CampoVisitas() {
 
           <p className="text-xs font-bold text-[var(--text-muted)] uppercase">Feed do dia</p>
           <ul className="space-y-2">
-            {equipeFeed.map(item => {
+            {equipeFeedList.map(item => {
               const alertaRaio = checkInAlertaForaRaio(item)
               const distNum = Number(item.distanciaMetros)
               const distLabel = Number.isFinite(distNum) ? `${Math.round(distNum)}m` : '—'
@@ -1350,7 +1359,7 @@ export default function CampoVisitas() {
               </li>
               )
             })}
-            {!equipeFeed.length && (
+            {!equipeFeedList.length && (
               <li className="text-center text-sm text-[var(--text-muted)] py-8">
                 {filtrosAtivos ? 'Nenhum check-in com estes filtros.' : 'Nenhum check-in nesta data.'}
               </li>

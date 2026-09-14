@@ -5,6 +5,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { ThemeProvider } from './theme/ThemeContext.jsx'
 import { ensureSyncInstalled } from './lib/cloudSync'
 import { sanitizeCorruptedStorage, initHeavyStore } from './utils/persist'
+import { sanitizeCampoArrayStorage } from './utils/campoStorageSanitize'
 import { resetIgrejasMapaSePreciso } from './utils/igrejasReset'
 import { installCampoFotoRetryListeners, repararFilaCampoFotosPendentes, processCampoFotoUploadQueue } from './utils/campoFotoUploadQueue'
 import './index.css'
@@ -40,6 +41,7 @@ async function bootstrap() {
   }
   ensureSyncInstalled('local')
   sanitizeCorruptedStorage()
+  sanitizeCampoArrayStorage({ write: true })
   resetIgrejasMapaSePreciso()
   installCampoFotoRetryListeners()
   repararFilaCampoFotosPendentes()

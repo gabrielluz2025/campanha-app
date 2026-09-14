@@ -1,7 +1,7 @@
 import { normStr, BAIRROS_BLUMENAU } from './constants'
 import { bairroCanon, bairroGeoNome } from './bairroMapa'
 import { CARGO_CORES, normalizarCargo } from './equipeSync'
-import { readStorage, writeStorage } from './persist'
+import { readStorage, writeStorage, readStorageArray } from './persist'
 import { cultoParaData, horaInicioCultoNaData, resolverCultoIgreja } from './cultoParse'
 
 export const ROTAS_STORAGE = 'rotas_paradas'
@@ -380,12 +380,7 @@ export function coordsDoBairro(bairrosCoords, bairroNome) {
 }
 
 export function loadEquipeMembros() {
-  try {
-    const v = JSON.parse(localStorage.getItem('equipe_membros') || '[]')
-    return Array.isArray(v) ? v : []
-  } catch {
-    return []
-  }
+  return readStorageArray('equipe_membros', [])
 }
 
 export function bairrosDoMembro(m) {

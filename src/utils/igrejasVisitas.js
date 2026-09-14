@@ -1,4 +1,4 @@
-import { readStorage, writeStorage } from './persist'
+import { readStorage, writeStorage, readStorageArray } from './persist'
 import { IGREJAS_MAPA_SOMENTE_MANUAL } from './igrejasFonte'
 import {
   VISITAS_STORAGE_KEY,
@@ -49,14 +49,16 @@ function labelUsuarioCurto(email = '', nome = '') {
 }
 
 function readVisitasRaw() {
-  return readStorage(VISITAS_STORAGE_KEY, {}) || {}
+  const v = readStorage(VISITAS_STORAGE_KEY, {})
+  if (v && typeof v === 'object' && !Array.isArray(v)) return v
+  return {}
 }
 
 /** Modo manual: visitas só para igrejas em igrejas_custom (ignora catálogo fixo id ≤ 1999). */
 export function idsIgrejasComVisitasPermitidas() {
   if (!IGREJAS_MAPA_SOMENTE_MANUAL) return null
-  const custom = readStorage('igrejas_custom', [])
-  const arr = Array.isArray(custom) ? custom : []
+  const custom = readStorageArray('igrejas_custom', [])
+  const arr = custom
   return new Set(arr.map(c => String(c.id)))
 }
 

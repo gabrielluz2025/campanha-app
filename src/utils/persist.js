@@ -26,6 +26,35 @@ export function parseStorage(raw, fallback) {
   }
 }
 
+/** Garante array a partir de JSON bruto ou valor já parseado. */
+export function safeParseArray(raw, fallback = []) {
+  const fb = Array.isArray(fallback) ? fallback : []
+  try {
+    if (raw == null || raw === '') return fb
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return Array.isArray(parsed) ? parsed : fb
+  } catch (e) {
+    console.warn('safeParseArray:', e)
+    return fb
+  }
+}
+
+/** Coerce qualquer valor para array (UI / `.length` seguro). */
+export function asArray(value, fallback = []) {
+  return Array.isArray(value) ? value : (Array.isArray(fallback) ? fallback : [])
+}
+
+/** Lê chave do storage — fallback deve ser array; corrige valor corrompido. */
+export function readStorageArray(key, fallback = []) {
+  const fb = Array.isArray(fallback) ? fallback : []
+  try {
+    const v = readStorage(key, fb)
+    return Array.isArray(v) ? v : fb
+  } catch {
+    return fb
+  }
+}
+
 /** Lê chave (localStorage leve ou IndexedDB pesado via memCache). */
 export function readStorage(key, fallback) {
   try {

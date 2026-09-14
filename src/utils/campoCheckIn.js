@@ -1,4 +1,4 @@
-import { readStorage } from './persist'
+import { readStorage, readStorageArray } from './persist'
 import { readIgrejasVisitas } from './igrejasCatalog'
 import { normalizarRegistroVisita } from './igrejasVisitasCore'
 import { coordValida, distanciaMetrosParada, haversineKm } from './rotaUtils'
@@ -46,8 +46,7 @@ function normEmail(e) {
 
 /** Igreja vinculada ao membro da equipe (cadastro Equipe). */
 export function igrejaIdDoMembroLogado(email) {
-  const membros = readStorage('equipe_membros', [])
-  if (!Array.isArray(membros)) return null
+  const membros = readStorageArray('equipe_membros', [])
   const m = membros.find(x => normEmail(x.email) === normEmail(email))
   if (m?.igrejaId != null && m.igrejaId !== '') return m.igrejaId
   return null
@@ -68,7 +67,8 @@ function emailEntrada(h) {
 export function listarCheckInsDoDia({ dataRef, catalog = [], visitasMap = null, somenteEmail = '' } = {}) {
   const hoje = dataRef || dataLocalHoje()
   const map = visitasMap || readIgrejasVisitas()
-  const byId = new Map((catalog || []).map(ig => [String(ig.id), ig]))
+  const cat = Array.isArray(catalog) ? catalog : []
+  const byId = new Map(cat.map(ig => [String(ig.id), ig]))
   const filtroEmail = normEmail(somenteEmail)
   const out = []
 

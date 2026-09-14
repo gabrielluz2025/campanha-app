@@ -1,4 +1,4 @@
-import { readStorage, writeStorage, flushAfterSave } from './persist'
+import { readStorage, writeStorage, flushAfterSave, readStorageArray } from './persist'
 import { buscarRotaTripOsrm } from './osrmRoute'
 import { coordValida } from './rotaUtils'
 
@@ -32,8 +32,7 @@ function dispatchChanged(detail = {}) {
 }
 
 export function readRotasDiariasRaw() {
-  const arr = readStorage(ROTAS_DIARIAS_KEY, [])
-  return Array.isArray(arr) ? arr : []
+  return readStorageArray(ROTAS_DIARIAS_KEY, [])
 }
 
 export function writeRotasDiarias(list, { flush = true } = {}) {
@@ -179,7 +178,7 @@ export function marcarParadaEmTransitoRota({ data, membroEmail, igrejaId }) {
 export function progressoRotasEquipe({ data, rotas = null, membros = null } = {}) {
   const alvo = String(data || '').trim()
   const rotasDia = rotasDiariasNaData(alvo, rotas)
-  const equipe = Array.isArray(membros) ? membros : readStorage('equipe_membros', [])
+  const equipe = Array.isArray(membros) ? membros : readStorageArray('equipe_membros', [])
   const byEmail = new Map()
   for (const r of rotasDia) {
     const email = normEmail(r.membroEmail)
@@ -277,7 +276,7 @@ export function excluirRotaDiaria(rotaId) {
   if (idx < 0) return false
   list.splice(idx, 1)
   writeRotasDiarias(list)
-  const removidos = readStorage(ROTAS_DIARIAS_REMOVIDOS_KEY, [])
+  const removidos = readStorageArray(ROTAS_DIARIAS_REMOVIDOS_KEY, [])
   const arr = Array.isArray(removidos) ? removidos : []
   if (!arr.includes(id)) {
     writeStorage(ROTAS_DIARIAS_REMOVIDOS_KEY, [...arr, id])

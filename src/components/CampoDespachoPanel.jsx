@@ -24,6 +24,7 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
   const hoje = dataLocalHoje()
   const dataAlvo = dataRota || hoje
   const membros = useMemo(() => loadEquipeMembros(), [])
+  const paradasList = Array.isArray(paradas) ? paradas : []
   const [tick, setTick] = useState(0)
   const [membroLocal, setMembroLocal] = useState('')
   const membroEmail = membroControlled != null ? membroControlled : membroLocal
@@ -397,7 +398,7 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
 
       {membroEmail && (
         <div className="flex flex-wrap gap-2">
-          {paradas.length >= 2 && (
+          {paradasList.length >= 2 && (
             <button
               type="button"
               disabled={otimizando}
@@ -409,7 +410,7 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
               Otimizar Sequência (Mais Rápida)
             </button>
           )}
-          {paradas.length > 0 && (
+          {paradasList.length > 0 && (
             <button
               type="button"
               onClick={enviarWhatsApp}
@@ -484,7 +485,7 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
           )}
 
           <ol className="space-y-1 max-h-[40vh] overflow-y-auto">
-            {paradas.map((p, idx) => {
+            {paradasList.map((p, idx) => {
               const ig = igById.get(String(p.igrejaId))
               return (
                 <li
@@ -524,7 +525,7 @@ const CampoDespachoPanel = forwardRef(function CampoDespachoPanel(
                 </li>
               )
             })}
-            {!paradas.length && (
+            {!paradasList.length && (
               <li className="text-xs text-[var(--text-muted)] py-2">Nenhuma parada — busque ou clique no mapa.</li>
             )}
           </ol>
